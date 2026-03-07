@@ -1,0 +1,2276 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VERITAS v5.1 — 교통사고 AI 포렌식 플랫폼</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+<style>
+/* ═══════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════ */
+:root {
+  --ink:       #0a0c10;
+  --ink2:      #111520;
+  --ink3:      #181d28;
+  --panel:     #1c2130;
+  --panel2:    #212840;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.12);
+  --text:      #e8edf5;
+  --text2:     #9aa5ba;
+  --text3:     #5a6478;
+  --text4:     #3a4157;
+  --gold:      #e8c86d;
+  --gold-dim:  rgba(232,200,109,0.12);
+  --gold-glow: rgba(232,200,109,0.06);
+  --red:       #f06565;
+  --red-lt:    rgba(240,101,101,0.10);
+  --amber:     #e8a048;
+  --amber-lt:  rgba(232,160,72,0.10);
+  --green:     #4ecb8e;
+  --green-lt:  rgba(78,203,142,0.10);
+  --blue:      #5b9cf6;
+  --blue-lt:   rgba(91,156,246,0.10);
+  --violet:    #8b7cf6;
+  --shadow:    0 4px 24px rgba(0,0,0,0.4);
+  --shadow-lg: 0 12px 60px rgba(0,0,0,0.5);
+  --r:         10px;
+  --r-lg:      16px;
+  --r-xl:      22px;
+}
+[data-theme="light"] {
+  --ink:       #f0f2f7;
+  --ink2:      #e8eaf0;
+  --ink3:      #dde0e9;
+  --panel:     #ffffff;
+  --panel2:    #f5f7fc;
+  --border:    rgba(0,0,0,0.07);
+  --border2:   rgba(0,0,0,0.12);
+  --text:      #111520;
+  --text2:     #374151;
+  --text3:     #6b7280;
+  --text4:     #9ca3af;
+  --gold:      #b8860b;
+  --gold-dim:  rgba(184,134,11,0.10);
+  --gold-glow: rgba(184,134,11,0.05);
+  --red:       #dc2626;
+  --red-lt:    #fef2f2;
+  --amber:     #d97706;
+  --amber-lt:  #fffbeb;
+  --green:     #16a34a;
+  --green-lt:  #f0fdf4;
+  --blue:      #2563eb;
+  --blue-lt:   #eff6ff;
+  --violet:    #7c3aed;
+  --shadow:    0 4px 24px rgba(0,0,0,0.08);
+  --shadow-lg: 0 12px 60px rgba(0,0,0,0.12);
+}
+
+/* ═══════════════════════════════
+   BASE
+═══════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--ink);
+  color: var(--text);
+  font-size: 14.5px;
+  line-height: 1.65;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.3s, color 0.3s;
+  overflow-x: hidden;
+}
+
+/* Background noise + grid texture */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: -2;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -5%, rgba(232,200,109,0.05) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 90% 110%, rgba(91,156,246,0.04) 0%, transparent 50%);
+  pointer-events: none;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: -1;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h60v60H0z' fill='none'/%3E%3Cpath d='M60 0H0v1h60zM60 60H0v-1h60zM0 0v60h1V0zM60 0v60h-1V0z' fill='rgba(255,255,255,0.015)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+[data-theme="light"] body::before {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -5%, rgba(184,134,11,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 90% 110%, rgba(37,99,235,0.04) 0%, transparent 50%);
+}
+
+/* ═══════════════════════════════
+   NAVBAR
+═══════════════════════════════ */
+.nav {
+  position: sticky; top: 0; z-index: 500;
+  background: rgba(10,12,16,0.88);
+  backdrop-filter: blur(18px) saturate(1.4);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.3s;
+}
+[data-theme="light"] .nav {
+  background: rgba(240,242,247,0.90);
+}
+.nav-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 36px;
+  height: 64px; display: flex; align-items: center; justify-content: space-between;
+}
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo-mark {
+  width: 32px; height: 32px; position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.logo-mark::before {
+  content: '';
+  position: absolute; inset: 0;
+  border: 1.5px solid var(--gold);
+  border-radius: 6px;
+  opacity: 0.8;
+  transform: rotate(12deg);
+}
+.logo-mark::after {
+  content: 'V';
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 16px; color: var(--gold);
+  position: relative; z-index: 1;
+}
+.logo-name {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 17px; letter-spacing: 0.12em;
+  color: var(--text); text-transform: uppercase;
+}
+.logo-edition {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 0.15em;
+  color: var(--gold); margin-top: 1px;
+  text-transform: uppercase; opacity: 0.75;
+  display: block;
+}
+.nav-links {
+  display: flex; align-items: center; gap: 1px;
+}
+.nav-a {
+  font-family: 'Syne', sans-serif; font-weight: 500; font-size: 12.5px;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--text3); padding: 7px 14px; border-radius: 7px;
+  border: none; background: none; cursor: pointer; transition: color 0.15s, background 0.15s;
+}
+.nav-a:hover { color: var(--text); background: var(--border); }
+.nav-right { display: flex; align-items: center; gap: 7px; }
+.nav-icon-btn {
+  width: 34px; height: 34px; border-radius: 8px;
+  border: 1px solid var(--border2); background: var(--panel);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; color: var(--text2); font-size: 14px; flex-shrink: 0;
+}
+.nav-icon-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-dim); }
+.hist-btn-nav {
+  height: 34px; padding: 0 14px;
+  border-radius: 8px; border: 1px solid var(--border2);
+  background: var(--panel); cursor: pointer;
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+  letter-spacing: 0.05em; color: var(--text2);
+  display: flex; align-items: center; gap: 7px; transition: all 0.15s;
+  position: relative;
+}
+.hist-btn-nav:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-dim); }
+.hist-badge {
+  min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 99px; background: var(--gold);
+  color: var(--ink); font-size: 9px; font-weight: 800;
+  display: none; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace;
+}
+.hist-badge.show { display: flex; }
+.nav-cta {
+  height: 34px; padding: 0 18px;
+  border-radius: 8px; border: none;
+  background: var(--gold); color: var(--ink);
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12.5px;
+  letter-spacing: 0.04em; cursor: pointer; transition: all 0.15s;
+}
+.nav-cta:hover { filter: brightness(1.1); box-shadow: 0 4px 18px rgba(232,200,109,0.3); }
+
+/* ═══════════════════════════════
+   HISTORY PANEL
+═══════════════════════════════ */
+.hist-panel {
+  position: fixed; top: 72px; right: 16px; z-index: 490;
+  width: 360px; background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-xl); box-shadow: var(--shadow-lg);
+  overflow: hidden; display: none;
+}
+.hist-panel.open { display: block; animation: fadeUp 0.2s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+.hist-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+}
+.hist-hd-title {
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+  letter-spacing: 0.10em; text-transform: uppercase; color: var(--gold);
+}
+.hist-clear {
+  font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.05em;
+  color: var(--text3); background: none; border: none; cursor: pointer; transition: color 0.15s;
+}
+.hist-clear:hover { color: var(--red); }
+.hist-list { max-height: 340px; overflow-y: auto; }
+.hist-item {
+  padding: 12px 18px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.12s;
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.hist-item:last-child { border-bottom: none; }
+.hist-item:hover { background: var(--gold-glow); }
+.hist-num {
+  font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500;
+  color: var(--gold); padding-top: 2px; flex-shrink: 0;
+  width: 20px; text-align: right;
+}
+.hist-info { flex: 1; min-width: 0; }
+.hist-summary { font-size: 12.5px; color: var(--text2); line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); margin-top: 4px; display: flex; gap: 8px; }
+.hc-hi { color: var(--green); font-weight: 500; }
+.hc-md { color: var(--amber); font-weight: 500; }
+.hc-lo { color: var(--red); font-weight: 500; }
+.hist-empty { padding: 28px 18px; text-align: center; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); }
+
+/* ═══════════════════════════════
+   HERO
+═══════════════════════════════ */
+.hero {
+  max-width: 1200px; margin: 0 auto;
+  padding: 100px 36px 72px;
+  text-align: center;
+  position: relative;
+}
+
+/* Decorative circuit lines */
+.hero-deco {
+  position: absolute; top: 60px; left: 50%;
+  transform: translateX(-50%);
+  width: 700px; height: 200px;
+  pointer-events: none; opacity: 0.4;
+}
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--gold);
+  background: var(--gold-dim);
+  border: 1px solid rgba(232,200,109,0.2);
+  padding: 6px 16px; border-radius: 99px;
+  margin-bottom: 28px;
+}
+.hero-eyebrow::before {
+  content: '';
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gold);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.hero-title {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: clamp(44px, 6.5vw, 80px);
+  line-height: 1.02; letter-spacing: -0.03em;
+  color: var(--text);
+  margin-bottom: 22px;
+}
+.hero-title span {
+  color: var(--gold);
+  position: relative;
+}
+
+.hero-sub {
+  font-size: 16.5px; color: var(--text2); line-height: 1.7;
+  max-width: 500px; margin: 0 auto 56px;
+}
+
+/* ═══════════════════════════════
+   INPUT CARD
+═══════════════════════════════ */
+.input-card {
+  background: var(--panel);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+  max-width: 900px; margin: 0 auto 28px;
+  border: 1px solid var(--border2);
+  overflow: hidden;
+  position: relative;
+}
+.input-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.4;
+}
+
+/* Proxy status banner */
+.proxy-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 10px 20px;
+  background: var(--panel2);
+  border-bottom: 1px solid var(--border);
+}
+.proxy-left { display: flex; align-items: center; gap: 10px; }
+.proxy-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text3); flex-shrink: 0;
+  transition: background 0.3s;
+}
+.proxy-dot.ok  { background: var(--green); box-shadow: 0 0 0 3px rgba(78,203,142,0.18); }
+.proxy-dot.err { background: var(--red);   box-shadow: 0 0 0 3px rgba(240,101,101,0.18); }
+.proxy-dot.checking { background: var(--amber); animation: pulse-dot 1s ease infinite; }
+.proxy-label {
+  font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 0.08em;
+  color: var(--text3);
+}
+.proxy-label strong { color: var(--text2); }
+.proxy-url-wrap {
+  display: flex; align-items: center; gap: 6px; flex: 1; max-width: 340px;
+}
+.proxy-url-input {
+  flex: 1; height: 28px; padding: 0 10px;
+  background: var(--ink); border: 1px solid var(--border2);
+  border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 11px;
+  color: var(--text2); outline: none; transition: border-color 0.15s;
+}
+.proxy-url-input:focus { border-color: var(--gold); }
+.proxy-url-input::placeholder { color: var(--text3); }
+.proxy-test-btn {
+  height: 28px; padding: 0 12px;
+  background: var(--gold-dim); border: 1px solid rgba(232,200,109,0.2);
+  border-radius: 6px; cursor: pointer;
+  font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500;
+  letter-spacing: 0.07em; color: var(--gold); transition: all 0.15s; white-space: nowrap;
+}
+.proxy-test-btn:hover { background: rgba(232,200,109,0.18); }
+.proxy-badge {
+  font-family: 'DM Mono', monospace; font-size: 9.5px; letter-spacing: 0.08em;
+  padding: 3px 10px; border-radius: 99px; white-space: nowrap;
+}
+.proxy-badge.free {
+  background: var(--green-lt); color: var(--green);
+  border: 1px solid rgba(78,203,142,0.2);
+}
+.proxy-badge.setup {
+  background: var(--amber-lt); color: var(--amber);
+  border: 1px solid rgba(232,160,72,0.2);
+}
+
+/* Tab bar */
+.tab-bar {
+  display: flex; align-items: center; gap: 3px;
+  padding: 14px 20px 10px;
+}
+.tab-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 16px; border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--text3); cursor: pointer; transition: all 0.15s;
+}
+.tab-btn:hover { border-color: var(--border2); color: var(--text2); }
+.tab-btn.on { border-color: var(--gold); color: var(--gold); background: var(--gold-dim); }
+.tab-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+/* Input panes */
+.scan-row { display: flex; align-items: stretch; gap: 12px; padding: 0 20px 18px; }
+.scan-input-wrap { flex: 1; }
+
+.scan-textarea {
+  width: 100%; min-height: 96px; padding: 14px 16px;
+  background: var(--ink); border: 1px solid var(--border2);
+  border-radius: var(--r); font-size: 13.5px; color: var(--text);
+  font-family: 'Noto Sans KR', sans-serif; resize: none; outline: none;
+  transition: border-color 0.15s; line-height: 1.7;
+}
+.scan-textarea:focus { border-color: var(--gold); }
+.scan-textarea::placeholder { color: var(--text3); font-size: 13px; }
+
+.scan-url-input {
+  width: 100%; height: 54px; padding: 0 16px;
+  background: var(--ink); border: 1px solid var(--border2);
+  border-radius: var(--r); font-size: 13.5px; color: var(--text);
+  font-family: 'DM Mono', monospace; outline: none;
+  transition: border-color 0.15s;
+}
+.scan-url-input:focus { border-color: var(--gold); }
+.scan-url-input::placeholder { color: var(--text3); font-family: 'Noto Sans KR', sans-serif; font-size: 13px; }
+
+.scan-cta {
+  flex-shrink: 0; width: 120px;
+  background: var(--gold);
+  border: none; border-radius: var(--r); color: var(--ink);
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 13px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.scan-cta:hover { filter: brightness(1.08); box-shadow: 0 6px 24px rgba(232,200,109,0.35); }
+.scan-cta:disabled { opacity: 0.4; cursor: not-allowed; filter: none; box-shadow: none; }
+.cta-inner { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.cta-top { font-size: 9px; letter-spacing: 0.14em; opacity: 0.75; }
+.cta-main { font-size: 15px; letter-spacing: 0.05em; }
+.spin-ring {
+  width: 22px; height: 22px; border: 3px solid rgba(10,12,16,0.25);
+  border-top-color: var(--ink); border-radius: 50%;
+  animation: spin 0.75s linear infinite; display: none;
+}
+.scan-cta.loading .cta-inner { display: none; }
+.scan-cta.loading .spin-ring { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* File drop */
+.file-drop {
+  width: 100%; min-height: 96px; padding: 16px;
+  background: var(--ink); border: 1.5px dashed var(--border2);
+  border-radius: var(--r); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; transition: all 0.15s; position: relative; text-align: center;
+}
+.file-drop:hover, .file-drop.over { border-color: var(--gold); background: var(--gold-glow); }
+.file-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.file-drop-ico { font-size: 24px; }
+.file-drop-txt { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; color: var(--text2); }
+.file-drop-sub { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); letter-spacing: 0.07em; }
+
+.file-tag {
+  display: none; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: var(--panel2); border: 1px solid var(--border2);
+  border-radius: var(--r); margin-top: 8px;
+}
+.file-tag.show { display: flex; }
+.file-tag-name { font-family: 'DM Mono', monospace; font-size: 11.5px; color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-tag-size { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); flex-shrink: 0; }
+.file-rm { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; flex-shrink: 0; line-height: 1; transition: color 0.15s; }
+.file-rm:hover { color: var(--red); }
+
+/* Thumbnail */
+.thumb-row {
+  display: none; align-items: flex-start; gap: 12px;
+  margin-top: 8px; padding: 10px 14px;
+  background: var(--ink); border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.thumb-canvas { width: 112px; height: 63px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--panel2); }
+.thumb-info { flex: 1; }
+.thumb-info strong { font-family: 'Syne', sans-serif; font-size: 11.5px; color: var(--text2); display: block; margin-bottom: 4px; }
+.thumb-info span { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); }
+
+.prog-track { display: none; height: 3px; background: var(--border); border-radius: 99px; margin-top: 8px; overflow: hidden; }
+.prog-fill { height: 100%; background: var(--gold); border-radius: 99px; width: 0; transition: width 0.1s; }
+
+/* Card bottom */
+.card-bottom {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border);
+}
+.btn-sample {
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--gold); background: var(--gold-dim);
+  border: 1px solid rgba(232,200,109,0.2);
+  padding: 7px 16px; border-radius: 7px; cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-sample:hover { background: rgba(232,200,109,0.18); }
+
+.card-selects { display: flex; gap: 8px; align-items: center; }
+.mini-select, .mini-input {
+  height: 32px; padding: 0 10px;
+  background: var(--ink); border: 1px solid var(--border2);
+  border-radius: 7px; font-family: 'Noto Sans KR', sans-serif; font-size: 12.5px;
+  color: var(--text2); outline: none; transition: border-color 0.15s;
+}
+.mini-select:focus, .mini-input:focus { border-color: var(--gold); }
+.mini-select { min-width: 150px; }
+.mini-input { width: 170px; }
+.mini-select option { background: var(--panel); }
+
+/* Cancel strip */
+.cancel-strip { display: none; justify-content: center; margin-top: 12px; }
+.cancel-strip.show { display: flex; }
+.btn-cancel {
+  font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.08em;
+  color: var(--text3); background: var(--panel); border: 1px solid var(--border2);
+  padding: 7px 20px; border-radius: 7px; cursor: pointer; transition: all 0.15s;
+}
+.btn-cancel:hover { color: var(--red); border-color: var(--red); }
+
+/* ═══════════════════════════════
+   TRUST + FEATURES
+═══════════════════════════════ */
+.trust {
+  max-width: 900px; margin: 0 auto 20px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: center;
+}
+.trust-lbl {
+  font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text3);
+}
+.trust-logos { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.trust-logo {
+  font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.05em;
+  color: var(--text3); padding: 5px 12px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 99px;
+}
+/* ═══════════════════════════════
+   LIVE COUNTER BAR
+═══════════════════════════════ */
+.counter-bar {
+  max-width: 900px; margin: 0 auto 6px;
+  padding: 0 36px;
+}
+.counter-inner {
+  display: flex; align-items: center; justify-content: center; gap: 0;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.counter-item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 14px 32px; flex: 1; gap: 4px;
+}
+.counter-num {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: clamp(22px, 3vw, 30px);
+  color: var(--gold); letter-spacing: -0.02em;
+  transition: all 0.4s;
+}
+.counter-label {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--text3);
+}
+.counter-div {
+  width: 1px; height: 40px; background: var(--border2); flex-shrink: 0;
+}
+.counter-live {
+  display: flex; align-items: center; gap: 6px;
+  width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 0 3px rgba(78,203,142,0.2);
+  animation: pulse-dot 2s ease-in-out infinite;
+  margin-bottom: 2px;
+}
+
+@media (max-width: 720px) {
+  .counter-bar { padding: 0 16px; }
+  .counter-item { padding: 12px 16px; }
+  .counter-num { font-size: 20px; }
+}
+.feature-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 8px 36px 0; max-width: 900px; margin: 0 auto; }
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 0.07em;
+  color: var(--text3); padding: 5px 12px;
+  border-radius: 99px;
+}
+.feat-pill::before { content: '◈'; color: var(--gold); font-size: 8px; }
+
+/* ═══════════════════════════════
+   LOADING
+═══════════════════════════════ */
+#loadingState { display: none; padding: 20px 36px; max-width: 900px; margin: 0 auto; }
+.load-card {
+  background: var(--panel); border: 1px solid var(--border2);
+  border-radius: var(--r-lg); padding: 36px 32px;
+  text-align: center; box-shadow: var(--shadow);
+}
+.load-spinner {
+  width: 48px; height: 48px; margin: 0 auto 20px;
+  border: 3px solid var(--border2);
+  border-top-color: var(--gold);
+  border-radius: 50%; animation: spin 1s linear infinite;
+}
+.load-msg {
+  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 16px;
+  color: var(--text2); margin-bottom: 24px;
+}
+.load-steps { display: flex; gap: 12px; justify-content: center; }
+.ls { display: flex; align-items: center; gap: 7px; padding: 6px 14px; border-radius: 99px; border: 1px solid var(--border); transition: all 0.3s; }
+.ls.active { border-color: var(--gold); background: var(--gold-dim); }
+.ls.done   { border-color: var(--green); background: rgba(78,203,142,0.08); }
+.ls-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--text3);
+  transition: background 0.3s;
+}
+.ls.active .ls-dot { background: var(--gold); animation: pulse-dot 1s ease infinite; }
+.ls.done   .ls-dot { background: var(--green); }
+.ls-lbl { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.07em; color: var(--text3); }
+.ls.active .ls-lbl, .ls.done .ls-lbl { color: var(--text2); }
+
+/* ═══════════════════════════════
+   ERROR STATE
+═══════════════════════════════ */
+#errorState {
+  display: none; max-width: 900px; margin: 16px auto; padding: 0 36px;
+  background: var(--red-lt); border: 1px solid rgba(240,101,101,0.2);
+  border-radius: var(--r-lg); padding: 20px 24px;
+}
+.err-hd { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; color: var(--red); margin-bottom: 8px; }
+.err-msg-txt { font-size: 13px; color: var(--text2); font-family: 'DM Mono', monospace; }
+.err-actions { display: flex; gap: 8px; margin-top: 14px; }
+.btn-retry {
+  font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.07em;
+  color: var(--gold); background: var(--gold-dim);
+  border: 1px solid rgba(232,200,109,0.2);
+  padding: 7px 16px; border-radius: 7px; cursor: pointer; transition: all 0.15s;
+}
+.btn-retry:hover { background: rgba(232,200,109,0.18); }
+.btn-copy-err {
+  font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.07em;
+  color: var(--text3); background: none; border: 1px solid var(--border2);
+  padding: 7px 16px; border-radius: 7px; cursor: pointer; transition: all 0.15s;
+}
+.btn-copy-err:hover { color: var(--text); border-color: var(--border2); }
+
+/* ═══════════════════════════════
+   RESULTS
+═══════════════════════════════ */
+#results { display: none; max-width: 900px; margin: 0 auto; padding: 0 36px 60px; }
+
+.res-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 0 16px;
+}
+.res-left { display: flex; align-items: center; gap: 12px; }
+.res-time {
+  font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.07em;
+  color: var(--text3);
+}
+.conf-tag {
+  font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 0.08em;
+  padding: 4px 12px; border-radius: 99px; font-weight: 500;
+}
+.ct-hi { background: var(--green-lt); color: var(--green); border: 1px solid rgba(78,203,142,0.2); }
+.ct-md { background: var(--amber-lt); color: var(--amber); border: 1px solid rgba(232,160,72,0.2); }
+.ct-lo { background: var(--red-lt);   color: var(--red);   border: 1px solid rgba(240,101,101,0.2); }
+
+.btn-export {
+  display: flex; align-items: center; gap: 7px;
+  font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.07em;
+  color: var(--gold); background: var(--gold-dim);
+  border: 1px solid rgba(232,200,109,0.2);
+  padding: 8px 18px; border-radius: 8px; cursor: pointer; transition: all 0.15s;
+}
+.btn-export:hover { background: rgba(232,200,109,0.18); }
+.btn-export:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Result cards */
+.rc {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--r-lg); margin-bottom: 12px;
+  overflow: hidden; transition: border-color 0.15s;
+}
+.rc:hover { border-color: var(--border2); }
+.rc-hd {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 22px; cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel2);
+}
+.rc-ico {
+  width: 28px; height: 28px;
+  background: var(--gold-dim); border: 1px solid rgba(232,200,109,0.2);
+  border-radius: 7px; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.rc-title {
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13.5px;
+  letter-spacing: 0.03em; color: var(--text); flex: 1;
+}
+.rc-label {
+  font-family: 'DM Mono', monospace; font-size: 9.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text3);
+  padding: 3px 10px; border-radius: 99px;
+  border: 1px solid var(--border);
+}
+.rc-arrow { color: var(--text3); transition: transform 0.2s; margin-left: auto; }
+.rc-coll .rc-arrow { transform: rotate(-90deg); }
+.rc-coll .rc-bd { display: none; }
+.rc-bd { padding: 20px 22px; }
+
+/* Summary */
+.s-txt { font-size: 14.5px; color: var(--text); line-height: 1.75; }
+.s-reason {
+  margin-top: 12px; padding: 10px 14px;
+  background: var(--panel2); border-radius: var(--r);
+  border-left: 2.5px solid var(--gold);
+  font-family: 'DM Mono', monospace; font-size: 11.5px; color: var(--text3); letter-spacing: 0.03em;
+}
+
+/* Fault meter */
+.fault-meter-wrap {
+  margin-top: 18px; padding: 18px 20px;
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.fault-meter-label {
+  font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.10em;
+  text-transform: uppercase; color: var(--text3); margin-bottom: 12px;
+}
+.fault-track {
+  height: 8px; background: var(--border2); border-radius: 99px;
+  overflow: hidden; display: flex;
+}
+.fault-a {
+  background: var(--blue); height: 100%;
+  transition: width 0.8s cubic-bezier(.4,0,.2,1);
+  border-radius: 99px 0 0 99px;
+}
+.fault-b {
+  background: var(--amber); height: 100%;
+  transition: width 0.8s cubic-bezier(.4,0,.2,1);
+  border-radius: 0 99px 99px 0;
+}
+.fault-row {
+  display: flex; justify-content: space-between; margin-top: 10px;
+}
+.fault-side { display: flex; align-items: center; gap: 8px; }
+.fault-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.fa-dot { background: var(--blue); }
+.fb-dot { background: var(--amber); }
+.fault-name { font-family: 'Syne', sans-serif; font-size: 12px; color: var(--text2); }
+.fault-pct { font-family: 'DM Mono', monospace; font-weight: 500; font-size: 22px; color: var(--text); }
+.fault-note {
+  margin-top: 8px; font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--text3); letter-spacing: 0.05em; text-align: center;
+}
+
+/* Diagram */
+.d-ctrl { display: flex; gap: 6px; margin-bottom: 12px; }
+.d-btn {
+  width: 30px; height: 30px; border-radius: 7px;
+  border: 1px solid var(--border2); background: var(--panel2);
+  color: var(--text2); cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+}
+.d-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-dim); }
+.d-box {
+  background-color: var(--panel2);
+  background-image:
+    radial-gradient(circle at 1px 1px, var(--border2) 1px, transparent 0);
+  background-size: 20px 20px;
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  min-height: 280px; display: flex; align-items: center; justify-content: center;
+  overflow: hidden; position: relative; cursor: grab;
+}
+.d-box:active { cursor: grabbing; }
+.d-wrap { width: 100%; overflow: visible; transition: transform 0.05s linear; }
+.d-svg  { width: 100%; max-width: 680px; height: auto; display: block; }
+.d-note { margin-top: 8px; text-align: center; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: var(--text3); }
+
+@keyframes cpulse { 0%,100%{transform:scale(1);opacity:0.6}50%{transform:scale(1.7);opacity:0.1} }
+.cpulse { transform-origin: center; animation: cpulse 2s ease-in-out infinite; }
+
+.dtip {
+  position: fixed; background: rgba(10,12,16,0.95); border: 1px solid var(--border2);
+  border-radius: 7px; padding: 6px 12px;
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: var(--text2); pointer-events: none; display: none; z-index: 9999;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4); white-space: nowrap;
+}
+
+/* Timeline */
+.tl { position: relative; display: flex; flex-direction: column; }
+.tl::before {
+  content: ''; position: absolute; left: 68px; top: 18px; bottom: 18px; width: 1px;
+  background: linear-gradient(transparent, var(--border2) 8%, var(--border2) 92%, transparent);
+}
+.tl-row { display: grid; grid-template-columns: 62px 16px 1fr; gap: 14px; align-items: flex-start; padding: 8px 0; }
+.tl-t   { font-family: 'DM Mono', monospace; font-size: 10.5px; color: var(--text3); text-align: right; padding-top: 3px; }
+.tl-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; position: relative; z-index: 1; flex-shrink: 0; }
+.tl-n   { background: var(--border2); }
+.tl-w   { background: var(--amber); box-shadow: 0 0 0 3px rgba(232,160,72,0.18); }
+.tl-d   { background: var(--red);   box-shadow: 0 0 0 3px rgba(240,101,101,0.18); }
+.tl-txt { font-size: 13.5px; color: var(--text2); line-height: 1.65; padding-top: 1px; }
+
+/* Behavior */
+.beh-g { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.beh-c {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 16px 18px;
+}
+.beh-ac {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2);
+}
+.beh-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.bd-a { background: var(--blue); }
+.bd-b { background: var(--amber); }
+.beh-it {
+  display: flex; align-items: flex-start; gap: 7px;
+  font-size: 13px; color: var(--text2); line-height: 1.55; margin-bottom: 6px;
+}
+.beh-it:last-child { margin-bottom: 0; }
+.beh-it::before { content: '›'; flex-shrink: 0; color: var(--text3); }
+.bi-blue  { color: var(--blue); }
+.bi-amber { color: var(--amber); }
+.bi-red   { color: var(--red); }
+.bi-green { color: var(--green); }
+.bi-gray  { color: var(--text3); }
+
+/* Risks */
+.rk-l { display: flex; flex-direction: column; gap: 8px; }
+.rk-row {
+  display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start;
+  padding: 12px 16px; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: var(--r);
+}
+.rk-ch {
+  font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500;
+  padding: 3px 10px; border-radius: 99px; white-space: nowrap; letter-spacing: 0.07em;
+}
+.rk-h  { background: var(--red-lt);   color: var(--red);   border: 1px solid rgba(240,101,101,0.2); }
+.rk-m  { background: var(--amber-lt); color: var(--amber); border: 1px solid rgba(232,160,72,0.2); }
+.rk-l2 { background: var(--green-lt); color: var(--green); border: 1px solid rgba(78,203,142,0.2); }
+.rk-u  { background: var(--panel);    color: var(--text3); border: 1px solid var(--border); }
+.rk-desc { font-size: 13.5px; color: var(--text); font-weight: 500; margin-bottom: 3px; }
+.rk-note { font-family: 'DM Mono', monospace; font-size: 10.5px; color: var(--text3); }
+
+/* Scenarios */
+.sc-l { display: flex; flex-direction: column; gap: 12px; }
+.sc-c {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 18px; transition: border-color 0.15s;
+}
+.sc-c:hover { border-color: var(--gold); }
+.sc-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.sc-id {
+  width: 24px; height: 24px; background: var(--gold-dim);
+  border: 1px solid rgba(232,200,109,0.2); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 11px; color: var(--gold);
+}
+.sc-ttl  { font-family: 'Syne', sans-serif; font-size: 13.5px; font-weight: 700; color: var(--text); }
+.sc-desc { font-size: 13px; color: var(--text2); line-height: 1.7; margin-bottom: 10px; }
+.sc-evs  { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.sc-ev   {
+  font-family: 'DM Mono', monospace; font-size: 10px; padding: 2px 8px;
+  border-radius: 5px; background: var(--blue-lt); color: var(--blue);
+  border: 1px solid rgba(91,156,246,0.15);
+}
+.sc-unc  { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); font-style: italic; }
+
+/* Legal */
+.lg-g { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.lg-b {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 14px 16px;
+}
+.lg-bttl {
+  font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.10em; color: var(--gold);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.lg-bttl::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+.lg-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.lg-list li { font-size: 12.5px; color: var(--text2); line-height: 1.6; padding-left: 14px; position: relative; }
+.lg-list li::before { content: '—'; position: absolute; left: 0; color: var(--text3); font-size: 10px; }
+.lg-warn {
+  margin-top: 14px; padding: 12px 16px;
+  background: var(--amber-lt); border: 1px solid rgba(232,160,72,0.15);
+  border-radius: var(--r); font-size: 12.5px; color: var(--text2); line-height: 1.65;
+}
+
+/* Disclaimer */
+.disc {
+  background: var(--gold-dim); border: 1px solid rgba(232,200,109,0.15);
+  border-radius: var(--r-lg); padding: 18px 20px;
+}
+.disc-ttl {
+  font-family: 'DM Mono', monospace; font-weight: 500; font-size: 10.5px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 8px;
+}
+.disc-txt { font-size: 13px; color: var(--text2); line-height: 1.75; }
+
+/* ═══════════════════════════════
+   FAB
+═══════════════════════════════ */
+.fab {
+  position: fixed; bottom: 28px; right: 28px; z-index: 600;
+  width: 50px; height: 50px; border-radius: 50%;
+  background: var(--gold); color: var(--ink);
+  border: none; cursor: pointer; font-size: 24px;
+  display: none; align-items: center; justify-content: center;
+  box-shadow: 0 6px 24px rgba(232,200,109,0.4);
+  transition: all 0.15s;
+}
+.fab:hover { transform: scale(1.08); filter: brightness(1.08); }
+.fab.show  { display: flex; animation: pop 0.25s cubic-bezier(.2,1.5,.5,1); }
+@keyframes pop { from{transform:scale(0.4);opacity:0} to{transform:scale(1);opacity:1} }
+
+/* ═══════════════════════════════
+   FOOTER
+═══════════════════════════════ */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 24px 36px;
+  transition: border-color 0.3s;
+}
+.ft-in {
+  max-width: 1200px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.ft-logo { display: flex; align-items: center; gap: 10px; }
+.ft-name {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px;
+  color: var(--gold); letter-spacing: 0.10em;
+}
+.ft-txt { font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 0.07em; color: var(--text3); }
+
+/* ═══════════════════════════════
+   RESPONSIVE
+═══════════════════════════════ */
+@media (max-width: 720px) {
+  .nav-links { display: none; }
+  .hero { padding: 60px 20px 48px; }
+  .hero-title { font-size: 38px; }
+  .input-card { margin-left: 16px; margin-right: 16px; }
+  #results, #loadingState, #errorState { padding-left: 20px; padding-right: 20px; }
+  .beh-g, .lg-g { grid-template-columns: 1fr; }
+  .card-selects { display: none; }
+  .fab { bottom: 20px; right: 20px; }
+  .hist-panel { width: calc(100vw - 32px); right: 16px; }
+  .scan-cta { width: 88px; }
+  .fault-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
+</style>
+</head>
+<body>
+
+<div class="dtip" id="dtip"></div>
+
+<!-- ════════════ NAVBAR ════════════ -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="#" onclick="goTop();return false;">
+      <div class="logo-mark"></div>
+      <div>
+        <div class="logo-name">VERITAS</div>
+        <div class="logo-edition">ROADJUDGE v5.1 — PUBLIC</div>
+      </div>
+    </a>
+
+    <div class="nav-links">
+      <button class="nav-a" data-i18n="nav_analysis">사고 분석</button>
+      <button class="nav-a" data-i18n="nav_diagram">다이어그램</button>
+      <button class="nav-a" data-i18n="nav_cases">사례 DB</button>
+      <button class="nav-a" data-i18n="nav_tools">포렌식 도구</button>
+      <button class="nav-a" data-i18n="nav_pricing">요금제</button>
+    </div>
+
+    <div class="nav-right">
+      <button class="hist-btn-nav" onclick="toggleHist()" id="histBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span data-i18n="nav_history">히스토리</span>
+        <span class="hist-badge" id="histBadge">0</span>
+      </button>
+      <button class="nav-icon-btn" onclick="toggleLang()" title="언어 전환">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+      </button>
+      <button class="nav-icon-btn" onclick="toggleTheme()" id="themeBtn" title="테마 전환">🌙</button>
+      <button class="nav-cta" data-i18n="nav_cta">무료 시작</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ════════════ HISTORY PANEL ════════════ -->
+<div class="hist-panel" id="histPanel">
+  <div class="hist-hd">
+    <span class="hist-hd-title" data-i18n="hist_title">분석 히스토리</span>
+    <button class="hist-clear" onclick="clearHist()" data-i18n="hist_clear">전체 삭제</button>
+  </div>
+  <div class="hist-list" id="histList"></div>
+</div>
+
+<!-- ════════════ HERO ════════════ -->
+<section class="hero">
+  <!-- Decorative SVG -->
+  <svg class="hero-deco" viewBox="0 0 700 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 100 H180 L220 60 H320 L360 140 H460 L500 100 H700" stroke="rgba(232,200,109,0.15)" stroke-width="1" fill="none"/>
+    <circle cx="220" cy="60" r="3" fill="rgba(232,200,109,0.3)"/>
+    <circle cx="320" cy="60" r="3" fill="rgba(232,200,109,0.3)"/>
+    <circle cx="360" cy="140" r="3" fill="rgba(232,200,109,0.3)"/>
+    <circle cx="460" cy="140" r="3" fill="rgba(232,200,109,0.3)"/>
+    <line x1="270" y1="60" x2="270" y2="20" stroke="rgba(232,200,109,0.1)" stroke-width="1" stroke-dasharray="4 4"/>
+    <line x1="410" y1="140" x2="410" y2="180" stroke="rgba(232,200,109,0.1)" stroke-width="1" stroke-dasharray="4 4"/>
+    <rect x="258" y="10" width="24" height="12" rx="3" fill="rgba(232,200,109,0.12)" stroke="rgba(232,200,109,0.2)" stroke-width="0.5"/>
+    <rect x="398" y="178" width="24" height="12" rx="3" fill="rgba(232,200,109,0.12)" stroke="rgba(232,200,109,0.2)" stroke-width="0.5"/>
+  </svg>
+
+  <div class="hero-eyebrow" data-i18n="hero_eyebrow">교통사고 AI 포렌식 플랫폼</div>
+  <h1 class="hero-title" data-i18n="hero_title_raw">
+    사고의 <span>진실</span>을<br>분석합니다
+  </h1>
+  <p class="hero-sub" data-i18n="hero_sub">블랙박스 영상, 사고 상황, 문서를 입력하면<br>VERITAS 엔진이 포렌식 수준의 분석을 제공합니다.</p>
+
+  <!-- INPUT CARD -->
+  <div class="input-card">
+    <!-- Proxy banner -->
+    <div class="proxy-banner" id="proxyBanner">
+      <div class="proxy-left">
+        <div class="proxy-dot checking" id="proxyDot"></div>
+        <span class="proxy-label"><strong>VERITAS ENGINE</strong> · 서버 연결</span>
+      </div>
+      <div class="proxy-url-wrap">
+        <input type="text" class="proxy-url-input" id="proxyUrl"
+          placeholder="Cloudflare Worker URL (https://...workers.dev)"
+          oninput="onProxyInput()">
+        <button class="proxy-test-btn" onclick="testProxy()">연결 테스트</button>
+      </div>
+      <span class="proxy-badge setup" id="proxyBadge">설정 필요</span>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn on" id="tab-txt-btn" onclick="switchTab('txt',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
+        <span data-i18n="tab_text">텍스트</span>
+      </button>
+      <button class="tab-btn" id="tab-file-btn" onclick="switchTab('file',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span data-i18n="tab_file">파일</span>
+      </button>
+      <button class="tab-btn" id="tab-url-btn" onclick="switchTab('url',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        <span data-i18n="tab_url">URL</span>
+      </button>
+    </div>
+
+    <!-- pane: text -->
+    <div class="scan-row" id="pane-txt">
+      <div class="scan-input-wrap">
+        <textarea class="scan-textarea" id="sitTxt" data-i18n-ph="txt_ph"></textarea>
+      </div>
+      <button class="scan-cta" id="cta1" onclick="startAnalysis()">
+        <div class="cta-inner">
+          <span class="cta-top">VERITAS</span>
+          <span class="cta-main">SCAN</span>
+        </div>
+        <div class="spin-ring"></div>
+      </button>
+    </div>
+
+    <!-- pane: file -->
+    <div class="scan-row" id="pane-file" style="display:none;flex-direction:column;gap:8px;">
+      <div style="display:flex;gap:12px;">
+        <div class="scan-input-wrap">
+          <div class="file-drop" id="fileDrop" ondragover="onDO(event)" ondragleave="onDL()" ondrop="onDD(event)">
+            <input type="file" id="fileInp" accept="video/mp4,video/webm,video/quicktime,image/*" onchange="onFS(event)">
+            <div class="file-drop-ico">🎬</div>
+            <div class="file-drop-txt" data-i18n="drop_txt">영상 또는 이미지를 드래그하거나 클릭</div>
+            <div class="file-drop-sub">MP4 · WEBM · MOV · JPG · PNG · 최대 200MB</div>
+          </div>
+          <div class="file-tag" id="fileTag">
+            <span style="font-size:16px">🎬</span>
+            <span class="file-tag-name" id="ftName"></span>
+            <span class="file-tag-size" id="ftSize"></span>
+            <button class="file-rm" onclick="rmFile()">×</button>
+          </div>
+          <div class="thumb-row" id="thumbRow">
+            <canvas class="thumb-canvas" id="thumbCanvas"></canvas>
+            <div class="thumb-info">
+              <strong data-i18n="thumb_label">영상 프리뷰</strong>
+              <span id="thumbDesc"></span>
+            </div>
+          </div>
+          <div class="prog-track" id="progTrack"><div class="prog-fill" id="progFill"></div></div>
+        </div>
+        <button class="scan-cta" id="cta2" onclick="startAnalysis()">
+          <div class="cta-inner">
+            <span class="cta-top">VERITAS</span>
+            <span class="cta-main">SCAN</span>
+          </div>
+          <div class="spin-ring"></div>
+        </button>
+      </div>
+    </div>
+
+    <!-- pane: url -->
+    <div class="scan-row" id="pane-url" style="display:none;">
+      <div class="scan-input-wrap">
+        <input type="text" class="scan-url-input" id="urlInp" data-i18n-ph="url_ph">
+      </div>
+      <button class="scan-cta" id="cta3" onclick="startAnalysis()">
+        <div class="cta-inner">
+          <span class="cta-top">VERITAS</span>
+          <span class="cta-main">SCAN</span>
+        </div>
+        <div class="spin-ring"></div>
+      </button>
+    </div>
+
+    <div class="card-bottom">
+      <button class="btn-sample" onclick="fillSample()" data-i18n="btn_sample">샘플 살펴보기</button>
+      <div class="card-selects">
+        <select class="mini-select" id="accType">
+          <option value="" data-i18n="sel_default">사고 유형 선택</option>
+          <option value="후방추돌">후방추돌</option>
+          <option value="차선변경충돌">차선변경충돌</option>
+          <option value="끼어들기충돌">끼어들기충돌</option>
+          <option value="교차로충돌">교차로충돌</option>
+          <option value="횡단보도사고">횡단보도사고</option>
+          <option value="주차장사고">주차장사고</option>
+          <option value="기타">기타</option>
+        </select>
+        <input type="text" class="mini-input" id="extra" placeholder="날씨, 속도, 신호 정보..." style="width:175px">
+      </div>
+    </div>
+  </div>
+
+  <div class="cancel-strip" id="cancelStrip">
+    <button class="btn-cancel" onclick="cancelAna()">✕ <span data-i18n="btn_cancel">분석 취소</span></button>
+  </div>
+</section>
+
+<!-- TRUST BAR -->
+<div class="trust" style="padding: 0 36px;">
+  <span class="trust-lbl" data-i18n="trust_lbl">전문가들이 신뢰하는</span>
+  <div class="trust-logos">
+    <span class="trust-logo">🏢 손해보험사</span>
+    <span class="trust-logo">⚖ 교통사고 법률</span>
+    <span class="trust-logo">🔍 손해사정사</span>
+    <span class="trust-logo">📋 보험연구원</span>
+    <span class="trust-logo">🚔 경찰청 협력</span>
+  </div>
+</div>
+
+<!-- LIVE COUNTER -->
+<div class="counter-bar" id="counterBar" style="display:none;">
+  <div class="counter-inner">
+    <div class="counter-item">
+      <span class="counter-num" id="cntTotal">—</span>
+      <span class="counter-label" data-i18n="cnt_total">총 분석 건수</span>
+    </div>
+    <div class="counter-div"></div>
+    <div class="counter-item">
+      <span class="counter-num" id="cntToday">—</span>
+      <span class="counter-label" data-i18n="cnt_today">오늘 분석</span>
+    </div>
+    <div class="counter-div"></div>
+    <div class="counter-item">
+      <span class="counter-live"></span>
+      <span class="counter-label" data-i18n="cnt_live">실시간 분석 중</span>
+    </div>
+  </div>
+</div>
+
+<div class="feature-row" style="padding: 10px 36px 0; margin-bottom: 24px;">
+  <span class="feat-pill">사고 포렌식 분석</span>
+  <span class="feat-pill">과실 비율 추론</span>
+  <span class="feat-pill">법률 참고 검토</span>
+  <span class="feat-pill">사고 다이어그램</span>
+  <span class="feat-pill">시나리오 분석</span>
+</div>
+
+<!-- ════════════ MAIN ════════════ -->
+<main>
+
+  <!-- Loading -->
+  <div id="loadingState">
+    <div class="load-card">
+      <div class="load-spinner"></div>
+      <div class="load-msg" id="loadMsg" data-i18n="load_msg">VERITAS 엔진이 분석 중입니다...</div>
+      <div class="load-steps">
+        <div class="ls" id="ls1"><div class="ls-dot"></div><div class="ls-lbl" data-i18n="step_1">상황 파싱</div></div>
+        <div class="ls" id="ls2"><div class="ls-dot"></div><div class="ls-lbl" data-i18n="step_2">AI 추론</div></div>
+        <div class="ls" id="ls3"><div class="ls-dot"></div><div class="ls-lbl" data-i18n="step_3">리포트 생성</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div id="errorState" style="max-width:900px;margin:16px auto;padding:0 36px;">
+    <div style="background:var(--red-lt);border:1px solid rgba(240,101,101,0.2);border-radius:var(--r-lg);padding:20px 24px;">
+      <div class="err-hd">⚠ <span data-i18n="err_title">분석 오류</span></div>
+      <div id="errMsg" class="err-msg-txt"></div>
+      <div class="err-actions">
+        <button class="btn-retry" onclick="startAnalysis()" data-i18n="btn_retry">↺ 다시 시도</button>
+        <button class="btn-copy-err" onclick="copyErr()" data-i18n="btn_copy_err">오류 복사</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <div class="res-header">
+      <div class="res-left">
+        <span class="res-time" id="resTime"></span>
+        <span class="conf-tag" id="confTag"></span>
+      </div>
+      <button class="btn-export" id="exportBtn" onclick="exportPDF()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="18"/><line x1="15" y1="15" x2="12" y2="18"/></svg>
+        <span data-i18n="btn_export">리포트 저장</span>
+      </button>
+    </div>
+
+    <!-- Summary -->
+    <div class="rc">
+      <div class="rc-hd" onclick="toggleRc(this.parentElement)">
+        <div class="rc-ico">📋</div>
+        <div class="rc-title" data-i18n="sec_summary">사건 요약</div>
+        <span class="rc-label">SUMMARY</span>
+      </div>
+      <div class="rc-bd">
+        <div class="s-txt" id="sTxt"></div>
+        <div class="s-reason" id="sReason" style="display:none"></div>
+        <!-- Fault meter -->
+        <div class="fault-meter-wrap" id="faultMeter" style="display:none;">
+          <div class="fault-meter-label">추정 과실 비율 (AI 참고용)</div>
+          <div class="fault-track">
+            <div class="fault-a" id="faultA" style="width:50%"></div>
+            <div class="fault-b" id="faultB" style="width:50%"></div>
+          </div>
+          <div class="fault-row">
+            <div class="fault-side">
+              <div class="fault-dot fa-dot"></div>
+              <div>
+                <div class="fault-name">자차 (A)</div>
+                <div class="fault-pct" id="faultAPct">50%</div>
+              </div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:0.08em;">VS</div>
+            </div>
+            <div class="fault-side" style="flex-direction:row-reverse;">
+              <div class="fault-dot fb-dot"></div>
+              <div style="text-align:right;">
+                <div class="fault-name">상대차 (B)</div>
+                <div class="fault-pct" id="faultBPct">50%</div>
+              </div>
+            </div>
+          </div>
+          <div class="fault-note" id="faultNote">※ AI 참고용 추정치 · 법적 효력 없음</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diagram -->
+    <div class="rc">
+      <div class="rc-hd" onclick="toggleRc(this.parentElement)">
+        <div class="rc-ico">🗺</div>
+        <div class="rc-title" data-i18n="sec_diagram">사고 다이어그램</div>
+        <span class="rc-label">DIAGRAM</span>
+      </div>
+      <div class="rc-bd">
+        <div class="d-ctrl">
+          <button class="d-btn" onclick="dZ(1.2)" title="확대">＋</button>
+          <button class="d-btn" onclick="dZ(0.83)" title="축소">－</button>
+          <button class="d-btn" onclick="dR()" title="리셋">⊙</button>
+        </div>
+        <div class="d-box" id="dBox" onmousedown="pS(event)" onmousemove="pM(event)" onmouseup="pE()" onmouseleave="pE()" onwheel="pW(event)">
+          <div class="d-wrap" id="dWrap"></div>
+        </div>
+        <div class="d-note" data-i18n="diagram_note">참고용 구조화 도식 · 실제 측량/감정 도면 아님</div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="rc">
+      <div class="rc-hd" onclick="toggleRc(this.parentElement)">
+        <div class="rc-ico">⏱</div>
+        <div class="rc-title" data-i18n="sec_timeline">사고 타임라인</div>
+        <span class="rc-label">TIMELINE</span>
+      </div>
+      <div class="rc-bd"><div class="tl" id="tlList"></div></div>
+    </div>
+
+    <!-- Behavior -->
+    <div class="rc">
+      <div class="rc-hd" onclick="toggleRc(this.parentElement)">
+        <div class="rc-ico">🚗</div>
+        <div class="rc-title" data-i18n="sec_behavior">차량 행동 분석</div>
+        <span class="rc-label">BEHAVIOR</span>
+      </div>
+      <div class="rc-bd"><div class="beh-g" id="behGrid"></div></div>
+    </div>
+
+    <!-- Risks -->
+    <div class="rc">
+      <div class="rc-hd" onclick="toggleRc(this.parentElement)">
+        <div class="rc-ico">⚠</div>
+        <div class="rc-title" data-i18n="sec_risks">위험 행동 탐지</div>
+        <span class="rc-label">RISK FLAGS</span>
+      </div>
+      <div class="rc-bd"><div class="rk-l" id="rkList"></div></div>
+    </div>
+
+    <!-- Scenarios -->
+    <div class="rc">
+      <div class="rc-hd" onclick="toggleRc(this.parentElement)">
+        <div class="rc-ico">🔀</div>
+        <div class="rc-title" data-i18n="sec_scenarios">가능한 사고 시나리오</div>
+        <span class="rc-label">SCENARIOS</span>
+      </div>
+      <div class="rc-bd"><div class="sc-l" id="scList"></div></div>
+    </div>
+
+    <!-- Legal (collapsible) -->
+    <div class="rc rc-coll" id="legalRc">
+      <div class="rc-hd" onclick="toggleRc(this.parentElement)">
+        <div class="rc-ico">⚖</div>
+        <div class="rc-title" data-i18n="sec_legal">참고용 법률 검토</div>
+        <span class="rc-label">LEGAL REF</span>
+        <span class="rc-arrow">▾</span>
+      </div>
+      <div class="rc-bd">
+        <div id="lgGrid"></div>
+        <div class="lg-warn" data-i18n="legal_warn">⚠ 이 내용은 법률 자문이 아닙니다. 실제 법적 판단은 반드시 변호사 또는 교통사고 전문가에게 문의하세요.</div>
+      </div>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="rc">
+      <div class="rc-hd" onclick="toggleRc(this.parentElement)">
+        <div class="rc-ico">📌</div>
+        <div class="rc-title" data-i18n="sec_disclaimer">면책 고지</div>
+        <span class="rc-label">NOTICE</span>
+      </div>
+      <div class="rc-bd">
+        <div class="disc">
+          <div class="disc-ttl">⚑ VERITAS NOTICE — <span data-i18n="disc_sub">참고용 분석</span></div>
+          <div class="disc-txt" data-i18n="disc_txt">본 분석 결과는 사용자가 제공한 정보와 AI 추론에 기반한 <strong>참고용 구조화 자료</strong>입니다. 과실 비율, 법적 책임 판정, 형사/민사 결론을 포함하지 않으며 포함해서도 안 됩니다. 실제 사고 처리는 관할 경찰, 보험사, 법률 전문가를 통해 진행하시기 바랍니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="ft-in">
+    <div class="ft-logo">
+      <div style="width:26px;height:26px;border:1.5px solid var(--gold);border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:13px;color:var(--gold);transform:rotate(10deg);">V</div>
+      <span class="ft-name">VERITAS</span>
+    </div>
+    <span class="ft-txt" data-i18n="footer_txt">ROADJUDGE v5.1 · 교통사고 AI 포렌식 분석 · 법률 판정 불포함 · 무료 공개</span>
+  </div>
+</footer>
+
+<button class="fab" id="fab" onclick="goTop()" title="새 분석">＋</button>
+<video id="hv" style="display:none" muted playsinline></video>
+
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+/* ══════════════════════════════════════
+   i18n
+══════════════════════════════════════ */
+const I18N = {
+  ko: {
+    nav_analysis:'사고 분석', nav_diagram:'다이어그램', nav_cases:'사례 DB',
+    nav_tools:'포렌식 도구', nav_pricing:'요금제', nav_history:'히스토리',
+    nav_cta:'무료 시작',
+    hero_eyebrow:'교통사고 AI 포렌식 플랫폼',
+    hero_title_raw:'사고의 <span>진실</span>을<br>분석합니다',
+    hero_sub:'블랙박스 영상, 사고 상황, 문서를 입력하면<br>VERITAS 엔진이 포렌식 수준의 분석을 제공합니다.',
+    tab_text:'텍스트', tab_file:'파일', tab_url:'URL',
+    api_save:'저장',
+    txt_ph:'사고 상황을 상세히 입력하세요.\n예) 왕복 4차선 도로에서 2차선으로 직진 중이었는데, 3차선에서 진행하던 상대 차량이 방향지시등 없이 갑자기 차선을 변경하여 제 차량 측면을 충돌했습니다...',
+    url_ph:'분석할 영상 URL을 입력하세요.',
+    drop_txt:'영상 또는 이미지를 드래그하거나 클릭',
+    thumb_label:'영상 프리뷰',
+    btn_sample:'샘플 살펴보기', btn_cancel:'분석 취소',
+    trust_lbl:'전문가들이 신뢰하는',
+    load_msg:'VERITAS 엔진이 분석 중입니다...',
+    step_1:'상황 파싱', step_2:'AI 추론', step_3:'리포트 생성',
+    err_title:'분석 오류', btn_retry:'↺ 다시 시도', btn_copy_err:'오류 복사',
+    btn_export:'리포트 저장',
+    sec_summary:'사건 요약', sec_diagram:'사고 다이어그램', sec_timeline:'사고 타임라인',
+    sec_behavior:'차량 행동 분석', sec_risks:'위험 행동 탐지', sec_scenarios:'가능한 사고 시나리오',
+    sec_legal:'참고용 법률 검토', sec_disclaimer:'면책 고지',
+    diagram_note:'참고용 구조화 도식 · 실제 측량/감정 도면 아님',
+    legal_warn:'⚠ 이 내용은 법률 자문이 아닙니다. 실제 법적 판단은 반드시 변호사 또는 교통사고 전문가에게 문의하세요.',
+    disc_sub:'참고용 분석',
+    disc_txt:'본 분석 결과는 사용자가 제공한 정보와 AI 추론에 기반한 <strong>참고용 구조화 자료</strong>입니다. 과실 비율, 법적 책임 판정, 형사/민사 결론을 포함하지 않으며 포함해서도 안 됩니다.',
+    hist_title:'분석 히스토리', hist_clear:'전체 삭제', hist_empty:'히스토리가 없습니다.',
+    cnt_total:'총 분석 건수', cnt_today:'오늘 분석', cnt_live:'실시간 운영 중',
+    footer_txt:'ROADJUDGE v5.1 · 교통사고 AI 포렌식 분석 · 법률 판정 불포함 · 무료 공개',
+    conf_hi:'신뢰도 높음', conf_md:'신뢰도 보통', conf_lo:'신뢰도 낮음',
+    toast_sample:'샘플 데이터가 입력되었습니다.', toast_done:'분석이 완료되었습니다.',
+    toast_err:'오류가 발생했습니다.', toast_api_err:'Worker URL을 먼저 설정해 주세요.',
+    toast_input_err:'사고 상황을 입력해 주세요.',
+    toast_pdf:'PDF 저장 중...', toast_pdf_done:'리포트가 저장되었습니다.',
+    toast_pdf_err:'PDF 저장 오류.', toast_file_big:'파일이 200MB를 초과합니다.',
+    toast_copied:'복사되었습니다.',
+    empty_tl:'타임라인 데이터 없음', empty_risk:'탐지된 위험 행동 없음', empty_sc:'시나리오 데이터 없음',
+    sample_sit:'왕복 4차선 도로 2차선을 약 50km/h로 직진 중, 3차선에서 진행하던 상대 차량이 방향지시등 없이 갑자기 차선 변경하여 제 차량 우측 앞 범퍼 부분을 충돌했습니다. 당시 신호는 녹색이었고, 날씨는 맑았으며 오후 2시 30분경이었습니다. 상대 차량은 충돌 직전 급가속한 것으로 보였습니다.',
+    sample_extra:'맑음, 주간, 건조 노면, 14:30',
+    sel_default:'사고 유형 선택',
+  },
+  en: {
+    nav_analysis:'Analysis', nav_diagram:'Diagram', nav_cases:'Case DB',
+    nav_tools:'Forensic Tools', nav_pricing:'Pricing', nav_history:'History',
+    nav_cta:'Get Started',
+    hero_eyebrow:'AI Traffic Accident Forensics Platform',
+    hero_title_raw:'Reveal the <span>truth</span><br>behind accidents',
+    hero_sub:'Input dashcam footage, descriptions, or documents.<br>The VERITAS engine delivers forensic-grade analysis.',
+    tab_text:'Text', tab_file:'File', tab_url:'URL',
+    api_save:'Save',
+    txt_ph:'Describe the accident in detail.\nEx) While driving straight in lane 2 of a 4-lane road, a vehicle from lane 3 suddenly changed lanes without signaling and hit my right front bumper...',
+    url_ph:'Enter a video URL to analyze.',
+    drop_txt:'Drag & drop video or image, or click to upload',
+    thumb_label:'Video Preview',
+    btn_sample:'Try Sample', btn_cancel:'Cancel',
+    trust_lbl:'Trusted by professionals at',
+    load_msg:'VERITAS engine is analyzing...',
+    step_1:'Parsing', step_2:'AI Reasoning', step_3:'Report Generation',
+    err_title:'Analysis Error', btn_retry:'↺ Retry', btn_copy_err:'Copy Error',
+    btn_export:'Save Report',
+    sec_summary:'Incident Summary', sec_diagram:'Accident Diagram', sec_timeline:'Accident Timeline',
+    sec_behavior:'Vehicle Behavior Analysis', sec_risks:'Risk Behavior Detection', sec_scenarios:'Possible Scenarios',
+    sec_legal:'Legal Review (Reference)', sec_disclaimer:'Disclaimer',
+    diagram_note:'Reference diagram only · Not an official survey or measurement',
+    legal_warn:'⚠ This is not legal advice. Consult a qualified attorney for actual legal judgments.',
+    disc_sub:'Reference Analysis',
+    disc_txt:'This analysis is a structured reference based on user input and AI inference. It does not constitute fault ratios, legal liability, or criminal/civil conclusions.',
+    hist_title:'Analysis History', hist_clear:'Clear All', hist_empty:'No history yet.',
+    cnt_total:'Total Analyses', cnt_today:"Today's Analyses", cnt_live:'Live & Running',
+    footer_txt:'ROADJUDGE v5.1 · AI Traffic Accident Forensics · No Legal Conclusions · Free Public Access',
+    conf_hi:'High Confidence', conf_md:'Medium Confidence', conf_lo:'Low Confidence',
+    toast_sample:'Sample data loaded.', toast_done:'Analysis complete.',
+    toast_err:'An error occurred.', toast_api_err:'Please set your Worker URL first.',
+    toast_input_err:'Please describe the accident.',
+    toast_pdf:'Saving PDF...', toast_pdf_done:'Report saved.',
+    toast_pdf_err:'PDF export failed.', toast_file_big:'File exceeds 200MB.',
+    toast_copied:'Copied.',
+    empty_tl:'No timeline data', empty_risk:'No risk behaviors detected', empty_sc:'No scenario data',
+    sample_sit:'While driving straight at ~50km/h in lane 2 of a 4-lane road, a vehicle from lane 3 suddenly changed lanes without signaling and collided with my right front bumper. The signal was green, weather was clear, around 2:30 PM. The other vehicle appeared to accelerate just before the collision.',
+    sample_extra:'Clear, daytime, dry road, 14:30',
+    sel_default:'Select Accident Type',
+  }
+};
+
+let lang = localStorage.getItem('rj_lang') || 'ko';
+function t(k) { return I18N[lang][k] || I18N['ko'][k] || k; }
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.dataset.i18n, v = t(k);
+    el.innerHTML = v.replace(/\n/g, '<br>');
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  // hero title with span preserved
+  const ht = document.querySelector('[data-i18n="hero_title_raw"]');
+  if (ht) ht.innerHTML = t('hero_title_raw');
+}
+
+function toggleLang() {
+  lang = lang === 'ko' ? 'en' : 'ko';
+  localStorage.setItem('rj_lang', lang);
+  applyLang();
+}
+
+/* ══════════════════════════════════════
+   THEME
+══════════════════════════════════════ */
+let theme = localStorage.getItem('rj_theme') || 'dark';
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('themeBtn').textContent = theme === 'dark' ? '☀️' : '🌙';
+}
+function toggleTheme() {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('rj_theme', theme);
+  applyTheme();
+}
+
+/* ══════════════════════════════════════
+   HISTORY
+══════════════════════════════════════ */
+const HIST_KEY = 'rj_v5_hist';
+const MAX_HIST = 8;
+
+function loadHist() { try { return JSON.parse(localStorage.getItem(HIST_KEY)) || []; } catch { return []; } }
+function saveHist(h) { localStorage.setItem(HIST_KEY, JSON.stringify(h)); }
+
+function addHist(result, accType) {
+  const h = loadHist();
+  h.unshift({
+    id: Date.now(),
+    ts: new Date().toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}),
+    summary: result.summary?.slice(0, 65) || '—',
+    confidence: result.confidence || '보통',
+    accType: accType || '',
+    full: result
+  });
+  saveHist(h.slice(0, MAX_HIST));
+  renderHist();
+}
+
+function renderHist() {
+  const h = loadHist();
+  const badge = document.getElementById('histBadge');
+  badge.textContent = h.length;
+  badge.classList.toggle('show', h.length > 0);
+  const list = document.getElementById('histList');
+  if (!h.length) { list.innerHTML = `<div class="hist-empty">${t('hist_empty')}</div>`; return; }
+  const cmap = {'높음':'hc-hi','High Confidence':'hc-hi','보통':'hc-md','Medium Confidence':'hc-md','낮음':'hc-lo','Low Confidence':'hc-lo'};
+  list.innerHTML = h.map((item, i) => `
+    <div class="hist-item" onclick="loadHistItem(${i})">
+      <div class="hist-num">0${i+1}</div>
+      <div class="hist-info">
+        <div class="hist-summary">${esc(item.summary)}</div>
+        <div class="hist-meta">
+          <span>${esc(item.ts)}</span>
+          <span class="${cmap[item.confidence]||'hc-md'}">${esc(item.confidence)}</span>
+          ${item.accType ? `<span>${esc(item.accType)}</span>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function loadHistItem(idx) {
+  const h = loadHist();
+  if (!h[idx]) return;
+  toggleHist();
+  renderAll(h[idx].full, h[idx].accType);
+  toast(lang==='ko'?'히스토리에서 불러왔습니다.':'Loaded from history.', 'info');
+}
+
+function clearHist() {
+  localStorage.removeItem(HIST_KEY);
+  renderHist();
+  toast(lang==='ko'?'히스토리를 삭제했습니다.':'History cleared.', 'info');
+}
+
+let histOpen = false;
+function toggleHist() {
+  histOpen = !histOpen;
+  document.getElementById('histPanel').classList.toggle('open', histOpen);
+  if (histOpen) renderHist();
+}
+document.addEventListener('click', e => {
+  if (histOpen && !document.getElementById('histPanel').contains(e.target) && !document.getElementById('histBtn').contains(e.target)) {
+    histOpen = false;
+    document.getElementById('histPanel').classList.remove('open');
+  }
+});
+
+/* ══════════════════════════════════════
+   TAB
+══════════════════════════════════════ */
+function switchTab(name, btn) {
+  ['txt','file','url'].forEach(n => {
+    const p = document.getElementById('pane-'+n);
+    p.style.display = n === name ? 'flex' : 'none';
+    if (n === name && name === 'file') p.style.flexDirection = 'column';
+    document.getElementById('tab-'+n+'-btn').classList.toggle('on', n === name);
+  });
+}
+
+/* ══════════════════════════════════════
+   PROXY CONFIG
+══════════════════════════════════════ */
+
+// ★ 배포 시 여기에 본인 Worker URL을 넣으세요
+const DEFAULT_PROXY = 'https://curly-bar-e572.aa01041374268.workers.dev';
+
+const PROXY_KEY = 'rj_proxy_url';
+let proxyReady = false;
+
+function loadProxy() {
+  // 우선순위: localStorage 저장값 → DEFAULT_PROXY
+  const saved = localStorage.getItem(PROXY_KEY) || '';
+  const url   = saved || DEFAULT_PROXY;
+
+  document.getElementById('proxyUrl').value = url;
+
+  if (url && !url.includes('YOUR-NAME')) {
+    // 유효한 URL이면 페이지 로드 시 자동 연결
+    verifyProxy(url);
+  } else {
+    setBanner('setup');
+  }
+}
+
+function onProxyInput() {
+  proxyReady = false;
+  setBanner('setup');
+}
+
+async function testProxy() {
+  const url = document.getElementById('proxyUrl').value.trim();
+  if (!url) { toast('Worker URL을 입력해 주세요.', 'error'); return; }
+  localStorage.setItem(PROXY_KEY, url);
+  await verifyProxy(url);
+}
+
+async function verifyProxy(url) {
+  setBanner('checking');
+  try {
+    // Ping with minimal request
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 8,
+        system: 'Reply only: OK',
+        messages: [{ role: 'user', content: 'ping' }]
+      })
+    });
+    if (res.ok || res.status === 400) {
+      // 400 means server responded (might be bad body), but connection works
+      proxyReady = true;
+      setBanner('ok');
+      toast(lang==='ko'?'VERITAS 서버 연결 성공!':'VERITAS server connected!', 'success');
+      fetchCounter(); // 연결 성공 시 카운터 로드
+    } else {
+      proxyReady = false;
+      setBanner('err');
+      toast(`서버 응답 오류: ${res.status}`, 'error');
+    }
+  } catch(e) {
+    proxyReady = false;
+    setBanner('err');
+    toast('연결 실패. Worker URL을 확인해 주세요.', 'error');
+  }
+}
+
+function setBanner(state) {
+  const dot   = document.getElementById('proxyDot');
+  const badge = document.getElementById('proxyBadge');
+  dot.className = 'proxy-dot';
+  if (state === 'ok') {
+    dot.classList.add('ok');
+    badge.className = 'proxy-badge free';
+    badge.textContent = lang==='ko'?'연결됨 ✓':'Connected ✓';
+  } else if (state === 'err') {
+    dot.classList.add('err');
+    badge.className = 'proxy-badge setup';
+    badge.textContent = lang==='ko'?'연결 실패':'Failed';
+  } else if (state === 'checking') {
+    dot.classList.add('checking');
+    badge.className = 'proxy-badge setup';
+    badge.textContent = lang==='ko'?'확인 중...':'Checking...';
+  } else {
+    badge.className = 'proxy-badge setup';
+    badge.textContent = lang==='ko'?'설정 필요':'Setup Required';
+  }
+}
+
+/* ══════════════════════════════════════
+   FILE + THUMBNAIL
+══════════════════════════════════════ */
+let sf = null;
+function onDO(e) { e.preventDefault(); document.getElementById('fileDrop').classList.add('over'); }
+function onDL()  { document.getElementById('fileDrop').classList.remove('over'); }
+function onDD(e) { e.preventDefault(); onDL(); const f = e.dataTransfer.files[0]; if(f) procF(f); }
+function onFS(e) { const f = e.target.files[0]; if(f) procF(f); }
+
+function procF(f) {
+  if (f.size > 200*1024*1024) { toast(t('toast_file_big'), 'error'); return; }
+  sf = f;
+  document.getElementById('ftName').textContent = f.name;
+  document.getElementById('ftSize').textContent = fmtB(f.size);
+  const ft = document.getElementById('fileTag');
+  ft.style.display = 'flex'; ft.classList.add('show');
+  simProg();
+  if (f.type.startsWith('video/')) extractThumbVideo(f);
+  else if (f.type.startsWith('image/')) extractThumbImage(f);
+}
+
+function extractThumbVideo(file) {
+  const vid = document.getElementById('hv');
+  const url = URL.createObjectURL(file);
+  vid.src = url; vid.currentTime = 0.5;
+  vid.onloadeddata = () => {
+    try {
+      const canvas = document.getElementById('thumbCanvas');
+      canvas.width = vid.videoWidth || 320; canvas.height = vid.videoHeight || 180;
+      canvas.getContext('2d').drawImage(vid, 0, 0, canvas.width, canvas.height);
+      const dur = vid.duration ? `${Math.round(vid.duration)}초` : '';
+      const res = vid.videoWidth ? `${vid.videoWidth}×${vid.videoHeight}` : '';
+      document.getElementById('thumbDesc').textContent = [file.name, dur, res].filter(Boolean).join(' · ');
+      document.getElementById('thumbRow').style.display = 'flex';
+    } catch(e) {}
+    URL.revokeObjectURL(url);
+  };
+  vid.onerror = () => URL.revokeObjectURL(url);
+}
+
+function extractThumbImage(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.getElementById('thumbCanvas');
+      canvas.width = img.width; canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      document.getElementById('thumbDesc').textContent = `${file.name} · ${img.width}×${img.height}`;
+      document.getElementById('thumbRow').style.display = 'flex';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function rmFile() {
+  sf = null;
+  document.getElementById('fileInp').value = '';
+  const ft = document.getElementById('fileTag');
+  ft.style.display = 'none'; ft.classList.remove('show');
+  document.getElementById('thumbRow').style.display = 'none';
+  document.getElementById('progTrack').style.display = 'none';
+  document.getElementById('thumbCanvas').getContext('2d').clearRect(0,0,9999,9999);
+}
+
+function simProg() {
+  const t2 = document.getElementById('progTrack'), f = document.getElementById('progFill');
+  t2.style.display = 'block'; let p = 0;
+  const iv = setInterval(() => {
+    p = Math.min(p + Math.random()*18, 100);
+    f.style.width = p + '%';
+    if (p >= 100) { clearInterval(iv); setTimeout(() => t2.style.display='none', 500); }
+  }, 80);
+}
+function fmtB(b) { return b < 1024*1024 ? (b/1024).toFixed(1)+' KB' : (b/1024/1024).toFixed(1)+' MB'; }
+
+/* ══════════════════════════════════════
+   SAMPLE
+══════════════════════════════════════ */
+function fillSample() {
+  document.getElementById('sitTxt').value = t('sample_sit');
+  document.getElementById('accType').value = '차선변경충돌';
+  document.getElementById('extra').value = t('sample_extra');
+  switchTab('txt', document.getElementById('tab-txt-btn'));
+  toast(t('toast_sample'), 'info');
+}
+
+/* ══════════════════════════════════════
+   SYSTEM PROMPT
+══════════════════════════════════════ */
+const SYS = `당신은 VERITAS 교통사고 포렌식 AI입니다.
+[절대 금지] 과실비율 확정, 법률결론 단정, 법률자문, 형사/민사 판단
+[필수 표현] "~가능성이 있습니다", "~검토가 필요합니다", "추가 자료 확인 필요"
+[기준] 한국 도로교통법, 판례 기반 시나리오 비교 방식
+[AI 역할] 분석 보조관 - 사람이 최종 판단해야 함
+
+반드시 아래 JSON만 응답하세요 (마크다운 없이):
+{
+  "summary": "사건 요약 (2-3문장)",
+  "confidence": "높음|보통|낮음",
+  "confidence_reason": "신뢰도 근거",
+  "fault_estimate": {
+    "party_a": 30,
+    "party_b": 70,
+    "note": "추정 근거 한줄"
+  },
+  "timeline": [
+    {"time": "T+0s", "event": "설명", "level": "normal|warn|danger"}
+  ],
+  "behavior": {
+    "ego": {
+      "actor": "자차",
+      "items": [{"text": "설명", "color": "blue|amber|red|green|gray"}]
+    },
+    "other": {
+      "actor": "상대차",
+      "items": [{"text": "설명", "color": "blue|amber|red|green|gray"}]
+    }
+  },
+  "risks": [
+    {"level": "높음|보통|낮음|불명확", "desc": "설명", "note": "보충"}
+  ],
+  "scenarios": [
+    {"id": "A", "title": "제목", "desc": "설명", "evidence": ["근거"], "uncertainty": "불확실요소"}
+  ],
+  "legal": {
+    "issues": ["검토 필요 사항"],
+    "law_refs": ["관련 법규"],
+    "additional_needed": ["추가 필요 자료"]
+  },
+  "diagram": {
+    "road_type": "straight|intersection|merge",
+    "lane_count": 2,
+    "features": ["signal","crosswalk","center_line","median"],
+    "vehicles": [
+      {"id": "A", "label": "자차", "x": 200, "y": 220, "direction": "north|south|east|west", "action": "straight|brake|lane_change|cut_in|turn_left|turn_right|stop"}
+    ],
+    "collision": {"x": 200, "y": 160}
+  }
+}
+
+좌표는 400×300 기준. 자차=A, 상대차=B. fault_estimate 합계는 반드시 100이어야 함.`;
+
+let abortCtrl = null;
+
+/* ══════════════════════════════════════
+   ANALYSIS
+══════════════════════════════════════ */
+async function startAnalysis() {
+  const proxyUrl = (document.getElementById('proxyUrl').value || localStorage.getItem(PROXY_KEY) || '').trim();
+  const sit   = document.getElementById('sitTxt').value.trim();
+  const url2  = document.getElementById('urlInp').value.trim();
+  const type  = document.getElementById('accType').value;
+  const extra = document.getElementById('extra').value.trim();
+
+  if (!proxyUrl) {
+    toast(lang==='ko'?'Worker URL을 먼저 입력해 주세요.':'Please enter your Worker URL.', 'error');
+    document.getElementById('proxyUrl').focus();
+    return;
+  }
+  if (!sit && !url2 && !sf) { toast(t('toast_input_err'), 'error'); return; }
+
+  setLoad(true); hideErr();
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('fab').classList.remove('show');
+
+  const parts = [];
+  if (url2)  parts.push(`영상 URL: ${url2}`);
+  if (sf)    parts.push(`파일명: ${sf.name} (${fmtB(sf.size)})`);
+  if (type)  parts.push(`사고 유형: ${type}`);
+  if (sit)   parts.push(`사고 상황:\n${sit}`);
+  if (extra) parts.push(`추가 정보: ${extra}`);
+
+  // Build messages - if image file, include as vision
+  let userContent;
+  if (sf && sf.type.startsWith('image/')) {
+    const b64 = await fileToB64(sf);
+    userContent = [
+      { type: 'image', source: { type: 'base64', media_type: sf.type, data: b64 } },
+      { type: 'text', text: parts.filter(p => !p.startsWith('파일명')).join('\n\n') || '위 이미지의 사고 상황을 분석해주세요.' }
+    ];
+  } else {
+    userContent = parts.join('\n\n');
+  }
+
+  abortCtrl = new AbortController();
+
+  try {
+    lS(1,'active'); await sl(400); lS(1,'done'); lS(2,'active');
+
+    const res = await fetch(proxyUrl, {
+      method: 'POST', signal: abortCtrl.signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
+        system: SYS,
+        messages: [{ role: 'user', content: userContent }]
+      })
+    });
+
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      const msg = e.error?.message || '';
+      let friendly = msg;
+      if (res.status === 401) friendly = lang==='ko' ? 'Worker API Key 오류입니다. Worker 환경변수를 확인해 주세요.' : 'Worker API Key error. Check your Worker environment variables.';
+      else if (res.status === 429) friendly = lang==='ko' ? '오늘 분석 한도(20회)에 도달했습니다. 내일 다시 이용해 주세요.' : 'Daily limit (20 analyses) reached. Please try again tomorrow.';
+      else if (res.status >= 500) friendly = lang==='ko' ? 'AI 서버 오류. 잠시 후 다시 시도해 주세요.' : 'AI server error.';
+      throw new Error(friendly || `API error (${res.status})`);
+    }
+
+    const data = await res.json();
+    const raw  = data.content?.[0]?.text || '';
+    lS(2,'done'); lS(3,'active'); await sl(300); lS(3,'done');
+
+    let result;
+    try { result = JSON.parse(raw.replace(/```json\n?|```/g,'').trim()); }
+    catch { throw new Error(lang==='ko'?'AI 응답 파싱 실패. 다시 시도해 주세요.':'Failed to parse AI response.'); }
+
+    setLoad(false);
+    addHist(result, type);
+    renderAll(result, type);
+    toast(t('toast_done'), 'success');
+    setTimeout(fetchCounter, 1000); // 분석 완료 후 카운터 갱신
+
+  } catch(e) {
+    if (e.name === 'AbortError') { setLoad(false); return; }
+    setLoad(false);
+    showErr(e.message);
+    toast(t('toast_err'), 'error');
+  }
+}
+
+function cancelAna() { if (abortCtrl) abortCtrl.abort(); setLoad(false); }
+
+async function fileToB64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('Read failed'));
+    r.readAsDataURL(file);
+  });
+}
+
+/* ══════════════════════════════════════
+   RENDER
+══════════════════════════════════════ */
+function renderAll(r, accType) {
+  document.getElementById('resTime').textContent =
+    new Date().toLocaleString(lang==='ko'?'ko-KR':'en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) +
+    (lang==='ko' ? ' 분석 완료' : ' Complete');
+
+  const cm = {
+    '높음': ['ct-hi','●', t('conf_hi')],
+    '보통': ['ct-md','◑', t('conf_md')],
+    '낮음': ['ct-lo','○', t('conf_lo')],
+  };
+  const [cls,ic,txt] = cm[r.confidence] || cm['보통'];
+  const ctag = document.getElementById('confTag');
+  ctag.className = 'conf-tag ' + cls;
+  ctag.textContent = ic + ' ' + txt;
+
+  document.getElementById('sTxt').textContent = r.summary || '';
+  const sr = document.getElementById('sReason');
+  if (r.confidence_reason) { sr.textContent = (lang==='ko'?'신뢰도 근거: ':'Basis: ') + r.confidence_reason; sr.style.display='block'; }
+  else sr.style.display = 'none';
+
+  // Fault meter
+  const fm = document.getElementById('faultMeter');
+  if (r.fault_estimate) {
+    const pA = Math.max(0, Math.min(100, Number(r.fault_estimate.party_a) || 50));
+    const pB = 100 - pA;
+    document.getElementById('faultA').style.width = pA + '%';
+    document.getElementById('faultB').style.width = pB + '%';
+    document.getElementById('faultAPct').textContent = pA + '%';
+    document.getElementById('faultBPct').textContent = pB + '%';
+    if (r.fault_estimate.note) document.getElementById('faultNote').textContent = '※ ' + r.fault_estimate.note + ' · AI 참고용 추정치';
+    fm.style.display = 'block';
+  } else { fm.style.display = 'none'; }
+
+  renderDiagram(r.diagram, accType);
+
+  // Timeline
+  const tl = document.getElementById('tlList');
+  if (!r.timeline?.length) tl.innerHTML = `<div style="color:var(--text3);font-family:'DM Mono',monospace;font-size:12px">${t('empty_tl')}</div>`;
+  else tl.innerHTML = r.timeline.map(item => {
+    const dc = item.level==='danger'?'tl-d':item.level==='warn'?'tl-w':'tl-n';
+    return `<div class="tl-row"><div class="tl-t">${esc(item.time||'')}</div><div class="tl-dot ${dc}"></div><div class="tl-txt">${esc(item.event||'')}</div></div>`;
+  }).join('');
+
+  // Behavior
+  const bg = document.getElementById('behGrid');
+  if (!r.behavior) bg.innerHTML = '';
+  else {
+    const sides = [r.behavior.ego, r.behavior.other].filter(Boolean);
+    bg.innerHTML = sides.map((s,i) => {
+      const dc = i===0?'bd-a':'bd-b';
+      const items = (s.items||[]).map(it => `<div class="beh-it bi-${it.color||'gray'}">${esc(it.text||'')}</div>`).join('');
+      return `<div class="beh-c"><div class="beh-ac"><span class="beh-dot ${dc}"></span>${esc(s.actor||'')}</div>${items}</div>`;
+    }).join('');
+  }
+
+  // Risks
+  const rl = document.getElementById('rkList');
+  const rm = {'높음':'rk-h','보통':'rk-m','낮음':'rk-l2','불명확':'rk-u'};
+  if (!r.risks?.length) rl.innerHTML = `<div style="color:var(--text3);font-family:'DM Mono',monospace;font-size:12px">${t('empty_risk')}</div>`;
+  else rl.innerHTML = r.risks.map(rk =>
+    `<div class="rk-row"><span class="rk-ch ${rm[rk.level]||'rk-u'}">${esc(rk.level||'')}</span><div><div class="rk-desc">${esc(rk.desc||'')}</div>${rk.note?`<div class="rk-note">${esc(rk.note)}</div>`:''}</div></div>`
+  ).join('');
+
+  // Scenarios
+  const sl2 = document.getElementById('scList');
+  if (!r.scenarios?.length) sl2.innerHTML = `<div style="color:var(--text3);font-family:'DM Mono',monospace;font-size:12px">${t('empty_sc')}</div>`;
+  else sl2.innerHTML = r.scenarios.map(s => {
+    const evs = (s.evidence||[]).map(e => `<span class="sc-ev">${esc(e)}</span>`).join('');
+    return `<div class="sc-c"><div class="sc-hd"><div class="sc-id">${esc(s.id||'')}</div><div class="sc-ttl">${esc(s.title||'')}</div></div><div class="sc-desc">${esc(s.desc||'')}</div>${evs?`<div class="sc-evs">${evs}</div>`:''}${s.uncertainty?`<div class="sc-unc">${lang==='ko'?'불확실 요소':'Uncertainty'}: ${esc(s.uncertainty)}</div>`:''}</div>`;
+  }).join('');
+
+  // Legal
+  const lg = document.getElementById('lgGrid');
+  if (!r.legal) lg.innerHTML = '';
+  else {
+    const blkDefs = lang==='ko'
+      ? [{t:'검토 필요 사항',items:r.legal.issues||[]},{t:'관련 법규 참고',items:r.legal.law_refs||[]},{t:'추가 필요 자료',items:r.legal.additional_needed||[]}]
+      : [{t:'Issues',items:r.legal.issues||[]},{t:'Relevant Laws',items:r.legal.law_refs||[]},{t:'Additional Evidence',items:r.legal.additional_needed||[]}];
+    const blks = blkDefs.filter(b => b.items.length);
+    lg.innerHTML = `<div class="lg-g">${blks.map(b=>`<div class="lg-b"><div class="lg-bttl">${esc(b.t)}</div><ul class="lg-list">${b.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`).join('')}</div>`;
+  }
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('fab').classList.add('show');
+  document.getElementById('results').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/* ══════════════════════════════════════
+   DIAGRAM
+══════════════════════════════════════ */
+let dSc=1, dPx=0, dPy=0, dPan=false, dSX=0, dSY=0;
+function applyDT() {
+  const w = document.getElementById('dWrap');
+  w.style.transform = `translate(${dPx}px,${dPy}px) scale(${dSc})`;
+  w.style.transformOrigin = 'center center';
+}
+function dZ(f) { dSc=Math.max(0.4,Math.min(3,dSc*f)); applyDT(); }
+function dR()  { dSc=1; dPx=0; dPy=0; applyDT(); }
+function pS(e) { if(e.button!==0)return; dPan=true; dSX=e.clientX-dPx; dSY=e.clientY-dPy; }
+function pM(e) { if(!dPan)return; dPx=e.clientX-dSX; dPy=e.clientY-dSY; applyDT(); }
+function pE()  { dPan=false; }
+function pW(e) { e.preventDefault(); dZ(e.deltaY<0?1.1:0.91); }
+
+function renderDiagram(d, accType) {
+  const w = document.getElementById('dWrap'); dSc=1; dPx=0; dPy=0;
+  const data = normD(d, accType);
+  if (!data) { w.innerHTML='<div style="color:var(--text3);padding:32px;font-family:\'DM Mono\',monospace;font-size:12px">No diagram data</div>'; return; }
+  w.innerHTML = buildSVG(data); applyDT();
+  w.querySelectorAll('.vh').forEach(el => {
+    el.addEventListener('mouseenter', () => { const tip=document.getElementById('dtip'); tip.textContent=el.dataset.tip; tip.style.display='block'; });
+    el.addEventListener('mousemove',  e  => { const tip=document.getElementById('dtip'); tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY-8)+'px'; });
+    el.addEventListener('mouseleave', () => { document.getElementById('dtip').style.display='none'; });
+  });
+}
+
+function normD(d, accType) {
+  if (d && d.road_type && Array.isArray(d.vehicles) && d.vehicles.length) {
+    return {
+      road_type: d.road_type, lane_count: clamp(Number(d.lane_count)||2,1,4),
+      features: Array.isArray(d.features)?d.features:[],
+      vehicles: d.vehicles.map(v=>({id:v.id||'A',label:v.label||v.id||'차량',x:clamp(v.x??200,20,380),y:clamp(v.y??150,20,280),direction:nDir(v.direction),action:v.action||'straight'})),
+      collision: {x:clamp(d.collision?.x??200,20,380),y:clamp(d.collision?.y??150,20,280)}
+    };
+  }
+  const fb = {
+    '후방추돌':    {road_type:'straight',    lane_count:2,features:['center_line'],vehicles:[{id:'A',label:'자차',x:160,y:210,direction:'north',action:'brake'},{id:'B',label:'상대차',x:160,y:260,direction:'north',action:'straight'}],collision:{x:160,y:232}},
+    '차선변경충돌':{road_type:'straight',    lane_count:3,features:['center_line'],vehicles:[{id:'A',label:'자차',x:140,y:225,direction:'north',action:'straight'},{id:'B',label:'상대차',x:220,y:165,direction:'north',action:'lane_change'}],collision:{x:182,y:190}},
+    '끼어들기충돌':{road_type:'merge',       lane_count:2,features:['center_line'],vehicles:[{id:'A',label:'자차',x:140,y:215,direction:'north',action:'straight'},{id:'B',label:'상대차',x:290,y:180,direction:'west',action:'cut_in'}],collision:{x:205,y:195}},
+    '교차로충돌':  {road_type:'intersection',lane_count:2,features:['signal','crosswalk'],vehicles:[{id:'A',label:'자차',x:158,y:245,direction:'north',action:'straight'},{id:'B',label:'상대차',x:295,y:138,direction:'west',action:'straight'}],collision:{x:210,y:168}},
+  };
+  return fb[accType] || fb['끼어들기충돌'];
+}
+
+function buildSVG(d) {
+  const dark = theme === 'dark';
+  const road=svgRoad(d,dark), feats=svgFeats(d.features||[],d.road_type,dark),
+        vehs=(d.vehicles||[]).map(svgVeh).join(''), col=svgCol(d.collision), leg=svgLeg(dark);
+  return `<svg class="d-svg" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="mA" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#5b9cf6"/></marker>
+  <marker id="mB" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#e8a048"/></marker>
+  <marker id="mC" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#5a6478"/></marker>
+  <filter id="vsf"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.35)"/></filter>
+</defs>
+${road}${feats}${vehs}${col}${leg}
+</svg>`;
+}
+
+function svgRoad(d, dark) {
+  const rc = dark ? '#2a3347' : '#cbd5e1';
+  const lc = dark ? '#364055' : '#94a3b8';
+  if (d.road_type==='intersection') return `
+<rect fill="${rc}" x="115" y="0" width="170" height="300"/>
+<rect fill="${rc}" x="0" y="88" width="400" height="124"/>
+<line stroke="${lc}" stroke-width="1.5" stroke-dasharray="10 8" x1="200" y1="0" x2="200" y2="88"/>
+<line stroke="${lc}" stroke-width="1.5" stroke-dasharray="10 8" x1="200" y1="212" x2="200" y2="300"/>
+<line stroke="${lc}" stroke-width="1.5" stroke-dasharray="10 8" x1="0" y1="150" x2="115" y2="150"/>
+<line stroke="${lc}" stroke-width="1.5" stroke-dasharray="10 8" x1="285" y1="150" x2="400" y2="150"/>`;
+  if (d.road_type==='merge') return `
+<polygon fill="${rc}" points="75,0 255,0 255,300 75,300"/>
+<polygon fill="${dark?'#2d3a52':'#b8c7d8'}" points="255,115 400,75 400,185 255,195"/>
+<line stroke="${lc}" stroke-width="1.5" stroke-dasharray="10 8" x1="165" y1="0" x2="165" y2="300"/>
+<line stroke="${lc}" stroke-width="1.5" stroke-dasharray="10 8" x1="255" y1="155" x2="400" y2="130"/>`;
+  const n=d.lane_count||2, rx=88, rw=224;
+  let lines='';
+  for(let i=1;i<n;i++){const x=rx+(rw/n)*i;lines+=`<line stroke="${lc}" stroke-width="1.5" stroke-dasharray="10 8" x1="${x}" y1="0" x2="${x}" y2="300"/>`;}
+  return `<rect fill="${rc}" x="${rx}" y="0" width="${rw}" height="300"/>${lines}`;
+}
+
+function svgFeats(features, rt, dark) {
+  let o = '';
+  if (features.includes('crosswalk')&&rt==='intersection') o+=`
+<rect fill="rgba(255,255,255,0.3)" x="115" y="76" width="170" height="8"/>
+<rect fill="rgba(255,255,255,0.3)" x="115" y="216" width="170" height="8"/>
+<rect fill="rgba(255,255,255,0.3)" x="103" y="88" width="8" height="124"/>
+<rect fill="rgba(255,255,255,0.3)" x="289" y="88" width="8" height="124"/>`;
+  if (features.includes('signal')&&rt==='intersection') o+=`
+<circle fill="${dark?'#e8c86d':'#b8860b'}" cx="106" cy="78" r="5"/>
+<circle fill="${dark?'#e8c86d':'#b8860b'}" cx="294" cy="78" r="5"/>
+<circle fill="${dark?'#e8c86d':'#b8860b'}" cx="106" cy="222" r="5"/>
+<circle fill="${dark?'#e8c86d':'#b8860b'}" cx="294" cy="222" r="5"/>`;
+  if (features.includes('median')) o+=`<line stroke="#e8a048" stroke-width="2.5" opacity="0.6" x1="200" y1="0" x2="200" y2="300"/>`;
+  if (features.includes('center_line')&&rt==='straight') o+=`<line stroke="#e8a048" stroke-width="2" stroke-dasharray="14 10" opacity="0.5" x1="200" y1="0" x2="200" y2="300"/>`;
+  return o;
+}
+
+function svgVeh(v) {
+  const angle = {north:0,east:90,south:180,west:270}[v.direction]||0;
+  const fill  = v.id==='A'?'#5b9cf6':v.id==='B'?'#e8a048':'#7a8899';
+  const strk  = v.id==='A'?'#93c5fd':v.id==='B'?'#fcd38a':'#a0aec0';
+  const mrk   = v.id==='A'?'mA':v.id==='B'?'mB':'mC';
+  let ax2=v.x, ay2=v.y;
+  if (v.direction==='north') ay2-=44; else if (v.direction==='south') ay2+=44;
+  else if (v.direction==='east') ax2+=44; else ax2-=44;
+  const tip = `${v.label} (${v.id}) · ${aKo(v.action)}`;
+  return `
+<line stroke="${fill}" stroke-width="2.5" opacity="0.7" marker-end="url(#${mrk})" x1="${v.x}" y1="${v.y}" x2="${ax2}" y2="${ay2}"/>
+<g class="vh" data-tip="${esc(tip)}" style="cursor:pointer" transform="translate(${v.x},${v.y}) rotate(${angle})" filter="url(#vsf)">
+  <rect fill="${fill}" stroke="${strk}" stroke-width="1.5" x="-14" y="-25" width="28" height="50" rx="7"/>
+  <rect fill="rgba(255,255,255,0.22)" x="-8" y="-18" width="16" height="10" rx="2"/>
+  <text fill="#fff" font-size="10" font-weight="800" text-anchor="middle" dominant-baseline="middle" font-family="'Syne','Inter',sans-serif" y="5">${esc(v.id)}</text>
+</g>
+<text fill="${fill}" font-size="9" font-family="'Noto Sans KR',sans-serif" text-anchor="middle" opacity="0.85" x="${v.x}" y="${v.y+38}">${esc(aKo(v.action))}</text>`;
+}
+
+function svgCol(c) {
+  if (!c) return '';
+  const x=c.x, y=c.y;
+  return `
+<circle class="cpulse" cx="${x}" cy="${y}" r="18" fill="rgba(240,101,101,0.07)" stroke="rgba(240,101,101,0.2)" stroke-width="1.5"/>
+<line stroke="#f06565" stroke-width="3.5" stroke-linecap="round" x1="${x-8}" y1="${y-8}" x2="${x+8}" y2="${y+8}"/>
+<line stroke="#f06565" stroke-width="3.5" stroke-linecap="round" x1="${x+8}" y1="${y-8}" x2="${x-8}" y2="${y+8}"/>`;
+}
+
+function svgLeg(dark) {
+  const bg = dark?'rgba(28,33,48,0.93)':'rgba(255,255,255,0.93)';
+  const br = dark?'rgba(54,64,85,0.7)':'rgba(203,213,225,0.8)';
+  const tc = dark?'#9aa5ba':'#374151';
+  return `
+<rect x="10" y="246" width="150" height="42" rx="8" fill="${bg}" stroke="${br}" stroke-width="1"/>
+<rect x="20" y="257" width="12" height="12" rx="3" fill="#5b9cf6"/>
+<text fill="${tc}" font-size="10.5" font-family="'Noto Sans KR',sans-serif" x="38" y="267">자차 (A)</text>
+<rect x="84" y="257" width="12" height="12" rx="3" fill="#e8a048"/>
+<text fill="${tc}" font-size="10.5" font-family="'Noto Sans KR',sans-serif" x="102" y="267">상대차 (B)</text>
+<line stroke="#f06565" stroke-width="2.5" stroke-linecap="round" x1="20" y1="280" x2="28" y2="280"/>
+<text fill="${tc}" font-size="10.5" font-family="'Noto Sans KR',sans-serif" x="34" y="283">충돌</text>`;
+}
+
+/* ══════════════════════════════════════
+   PDF EXPORT
+══════════════════════════════════════ */
+async function exportPDF() {
+  const btn = document.getElementById('exportBtn');
+  btn.disabled = true; toast(t('toast_pdf'), 'info');
+  try {
+    const el = document.getElementById('results');
+    const canvas = await html2canvas(el, {
+      scale: 1.5,
+      backgroundColor: theme==='dark' ? '#0a0c10' : '#f0f2f7',
+      logging: false, useCORS: true
+    });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const W=210, m=12, uw=W-m*2;
+    const imgH = (canvas.height/canvas.width)*uw;
+    let remaining=imgH, srcY=0;
+    while (remaining > 0) {
+      const ph=Math.min(remaining,277-m*2), sh=(ph/imgH)*canvas.height;
+      const pc=document.createElement('canvas'); pc.width=canvas.width; pc.height=sh;
+      pc.getContext('2d').drawImage(canvas,0,srcY,canvas.width,sh,0,0,canvas.width,sh);
+      const pi=pc.toDataURL('image/jpeg',0.92);
+      if (srcY>0) pdf.addPage();
+      pdf.addImage(pi,'JPEG',m,m,uw,ph);
+      srcY+=sh; remaining-=ph;
+    }
+    const dateStr = new Date().toISOString().slice(0,10);
+    pdf.save(`VERITAS_Report_${dateStr}.pdf`);
+    toast(t('toast_pdf_done'), 'success');
+  } catch(e) { toast(t('toast_pdf_err'), 'error'); console.error(e); }
+  finally { btn.disabled = false; }
+}
+
+/* ══════════════════════════════════════
+   UI HELPERS
+══════════════════════════════════════ */
+function setLoad(on) {
+  document.getElementById('loadingState').style.display = on ? 'block' : 'none';
+  document.getElementById('cancelStrip').classList.toggle('show', on);
+  ['cta1','cta2','cta3'].forEach(id => {
+    const el = document.getElementById(id); if(!el) return;
+    el.disabled = on; el.classList.toggle('loading', on);
+  });
+  if (on) ['ls1','ls2','ls3'].forEach(id => { document.getElementById(id).className='ls'; });
+}
+function lS(n,s) { const el=document.getElementById('ls'+n); if(el) el.className='ls '+s; }
+function showErr(msg) {
+  const el = document.getElementById('errorState');
+  document.getElementById('errMsg').textContent = msg;
+  el.style.display = 'block';
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function hideErr() { document.getElementById('errorState').style.display='none'; }
+function copyErr() { navigator.clipboard?.writeText(document.getElementById('errMsg').textContent).then(()=>toast(t('toast_copied'),'info')); }
+function toggleRc(el) { el.classList.toggle('rc-coll'); }
+function goTop() {
+  document.querySelector('.hero').scrollIntoView({behavior:'smooth'});
+  document.getElementById('results').style.display='none';
+  document.getElementById('fab').classList.remove('show');
+}
+
+function toast(msg, type='info') {
+  const c = {success:'#4ecb8e',error:'#f06565',info:'#5b9cf6',warning:'#e8a048'};
+  const bg = theme==='dark'?'rgba(28,33,48,0.97)':'rgba(255,255,255,0.97)';
+  Toastify({
+    text: msg, duration: 3200, gravity:'bottom', position:'right',
+    style: {
+      background: bg, border:`1px solid ${c[type]}`,
+      color: c[type], borderRadius:'10px',
+      fontFamily:"'DM Mono','Noto Sans KR',sans-serif",
+      fontSize:'12px', padding:'12px 18px',
+      boxShadow:'0 6px 28px rgba(0,0,0,0.25)',
+      letterSpacing:'0.03em'
+    }
+  }).showToast();
+}
+
+/* ══════════════════════════════════════
+   UTILS
+══════════════════════════════════════ */
+function clamp(v,a,b) { return Math.max(a,Math.min(b,v)); }
+function nDir(d) { return ['north','south','east','west'].includes(d)?d:'north'; }
+function sl(ms) { return new Promise(r=>setTimeout(r,ms)); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+function aKo(a) { return {straight:'직진',brake:'감속',lane_change:'차선변경',cut_in:'끼어들기',turn_left:'좌회전',turn_right:'우회전',stop:'정지'}[a]||a; }
+
+/* ══════════════════════════════════════
+   LIVE COUNTER
+══════════════════════════════════════ */
+function fmtCount(n) {
+  if (n >= 10000) return (n/10000).toFixed(1) + '만';
+  if (n >= 1000)  return (n/1000).toFixed(1) + 'K';
+  return String(n);
+}
+
+async function fetchCounter() {
+  const proxyUrl = (document.getElementById('proxyUrl').value || localStorage.getItem(PROXY_KEY) || '').trim();
+  if (!proxyUrl) return;
+  try {
+    const statsUrl = proxyUrl.replace(/\/$/, '') + '/stats';
+    const res = await fetch(statsUrl);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (typeof data.total === 'number') {
+      document.getElementById('cntTotal').textContent = fmtCount(data.total);
+      document.getElementById('cntToday').textContent = fmtCount(data.today);
+      document.getElementById('counterBar').style.display = 'block';
+    }
+  } catch { /* 카운터 실패해도 UI에 영향 없음 */ }
+}
+
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
+applyTheme();
+applyLang();
+loadProxy();
+renderHist();
+// 카운터: 프록시 URL 저장돼 있으면 자동 로드
+setTimeout(fetchCounter, 800);
+</script>
+</body>
+</html>
