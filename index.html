@@ -1215,6 +1215,15 @@ footer {
 
   <!-- Results -->
   <div id="results">
+    <!-- 면책 배너 -->
+    <div style="max-width:900px;margin:0 auto 0 auto;padding:0 36px;">
+      <div style="background:rgba(240,101,101,0.12);border:1.5px solid rgba(240,101,101,0.35);border-radius:var(--r);padding:12px 18px;display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <span style="font-size:16px;">⚠️</span>
+        <span style="font-size:12px;color:#f09090;line-height:1.5;font-family:'Noto Sans KR',sans-serif;">
+          <strong>본 분석은 AI 추정 참고용이며 법적 효력이 없습니다.</strong> 과실비율은 실제와 다를 수 있습니다. 반드시 보험사·경찰·변호사와 상담하세요.
+        </span>
+      </div>
+    </div>
     <div class="res-header">
       <div class="res-left">
         <span class="res-time" id="resTime"></span>
@@ -1778,8 +1787,10 @@ const SYS = `당신은 VERITAS 교통사고 포렌식 AI입니다.
   "confidence": "높음|보통|낮음",
   "confidence_reason": "신뢰도 근거",
   "fault_estimate": {
-    "party_a": 30,
-    "party_b": 70,
+    "party_a_min": 20,
+    "party_a_max": 40,
+    "party_b_min": 60,
+    "party_b_max": 80,
     "note": "추정 근거 한줄"
   },
   "timeline": [
@@ -1817,7 +1828,7 @@ const SYS = `당신은 VERITAS 교통사고 포렌식 AI입니다.
   }
 }
 
-좌표는 400×300 기준. 자차=A, 상대차=B. fault_estimate 합계는 반드시 100이어야 함.`;
+좌표는 400×300 기준. 자차=A, 상대차=B. fault_estimate는 min/max 범위로 표현하고, party_a_min+party_a_max 평균 + party_b_min+party_b_max 평균이 각각 합쳐서 100이 되도록 하라. 절대 단일 확정 수치로 표현하지 말 것.`;
 
 let abortCtrl = null;
 
@@ -1946,13 +1957,20 @@ function renderAll(r, accType) {
   // Fault meter
   const fm = document.getElementById('faultMeter');
   if (r.fault_estimate) {
-    const pA = Math.max(0, Math.min(100, Number(r.fault_estimate.party_a) || 50));
+    const fe = r.fault_estimate;
+    // 범위 중간값으로 바 표시
+    const pA = Math.max(0, Math.min(100, fe.party_a_min != null ? Math.round((Number(fe.party_a_min)+Number(fe.party_a_max))/2) : (Number(fe.party_a)||50)));
     const pB = 100 - pA;
     document.getElementById('faultA').style.width = pA + '%';
     document.getElementById('faultB').style.width = pB + '%';
-    document.getElementById('faultAPct').textContent = pA + '%';
-    document.getElementById('faultBPct').textContent = pB + '%';
-    if (r.fault_estimate.note) document.getElementById('faultNote').textContent = '※ ' + r.fault_estimate.note + ' · AI 참고용 추정치';
+    // 범위 표시
+    const aMin = fe.party_a_min != null ? Number(fe.party_a_min) : pA;
+    const aMax = fe.party_a_max != null ? Number(fe.party_a_max) : pA;
+    const bMin = fe.party_b_min != null ? Number(fe.party_b_min) : pB;
+    const bMax = fe.party_b_max != null ? Number(fe.party_b_max) : pB;
+    document.getElementById('faultAPct').textContent = aMin === aMax ? aMin + '%' : aMin + '~' + aMax + '%';
+    document.getElementById('faultBPct').textContent = bMin === bMax ? bMin + '%' : bMin + '~' + bMax + '%';
+    if (fe.note) document.getElementById('faultNote').textContent = '※ ' + fe.note + ' · AI 참고용 추정 범위';
     fm.style.display = 'block';
   } else { fm.style.display = 'none'; }
 
