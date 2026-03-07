@@ -1025,7 +1025,7 @@ footer {
   <h1 class="hero-title" data-i18n="hero_title_raw">
     사고의 <span>진실</span>을<br>분석합니다
   </h1>
-  <p class="hero-sub" data-i18n="hero_sub">블랙박스 캡처 이미지를 올리거나 사고 상황을 입력하면<br>VERITAS 엔진이 포렌식 수준의 과실 분석을 제공합니다.</p>
+  <p class="hero-sub" data-i18n="hero_sub">블랙박스 영상, 사고 상황, 문서를 입력하면<br>VERITAS 엔진이 포렌식 수준의 분석을 제공합니다.</p>
 
   <!-- INPUT CARD -->
   <div class="input-card">
@@ -1044,23 +1044,14 @@ footer {
       <span class="proxy-badge setup" id="proxyBadge">설정 필요</span>
     </div>
 
-    <!-- 블랙박스 안내 배너 -->
-    <div style="background:linear-gradient(90deg,rgba(232,200,109,0.10),rgba(91,156,246,0.08));border:1px solid rgba(232,200,109,0.25);border-radius:var(--r);padding:10px 16px;margin-bottom:10px;display:flex;align-items:center;gap:10px;">
-      <span style="font-size:18px;">📷</span>
-      <div>
-        <div style="font-size:12px;color:var(--gold);font-weight:600;letter-spacing:0.05em;">블랙박스 프레임 이미지 분석 지원</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:2px;">블랙박스 영상에서 사고 순간 캡처 → 이미지 업로드 → AI가 직접 분석합니다</div>
-      </div>
-    </div>
-
     <div class="tab-bar">
-      <button class="tab-btn" id="tab-file-btn" onclick="switchTab('file',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <span>📷 블랙박스 이미지</span>
-      </button>
       <button class="tab-btn on" id="tab-txt-btn" onclick="switchTab('txt',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
         <span data-i18n="tab_text">텍스트</span>
+      </button>
+      <button class="tab-btn" id="tab-file-btn" onclick="switchTab('file',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span data-i18n="tab_file">파일</span>
       </button>
       <button class="tab-btn" id="tab-url-btn" onclick="switchTab('url',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
@@ -1088,9 +1079,9 @@ footer {
         <div class="scan-input-wrap">
           <div class="file-drop" id="fileDrop" ondragover="onDO(event)" ondragleave="onDL()" ondrop="onDD(event)">
             <input type="file" id="fileInp" accept="video/mp4,video/webm,video/quicktime,image/*" onchange="onFS(event)">
-            <div class="file-drop-ico">📷</div>
-            <div class="file-drop-txt" data-i18n="drop_txt">블랙박스 캡처 이미지를 드래그하거나 클릭</div>
-            <div class="file-drop-sub">JPG · PNG · 사고 순간 프레임 캡처 권장 · 최대 200MB</div>
+            <div class="file-drop-ico">🎬</div>
+            <div class="file-drop-txt" data-i18n="drop_txt">영상 또는 이미지를 드래그하거나 클릭</div>
+            <div class="file-drop-sub">MP4 · WEBM · MOV · JPG · PNG · 최대 200MB</div>
           </div>
           <div class="file-tag" id="fileTag">
             <span style="font-size:16px">🎬</span>
