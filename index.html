@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VERITAS v5.1 — 교통사고 AI 포렌식 플랫폼</title>
+<title>VERITAS v6 — 교통사고 AI 포렌식 플랫폼</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
@@ -894,6 +894,26 @@ body::after {
   border-radius: var(--r); font-size: 12.5px; color: var(--text2); line-height: 1.65;
 }
 
+/* Law badges */
+.lg-b-law {
+  background: rgba(10,30,60,0.5); border: 1px solid rgba(100,160,255,0.25);
+  border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 10px;
+}
+.law-badge-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.law-badge {
+  display: inline-block; padding: 4px 10px; border-radius: 20px;
+  font-size: 11.5px; font-family: 'DM Mono', monospace; font-weight: 500;
+  letter-spacing: 0.02em; line-height: 1.5;
+}
+.law-badge-act {
+  background: rgba(60,120,255,0.15); border: 1px solid rgba(60,120,255,0.35);
+  color: #7BAAFF;
+}
+.law-badge-case {
+  background: rgba(232,160,72,0.12); border: 1px solid rgba(232,160,72,0.3);
+  color: var(--gold);
+}
+
 /* Disclaimer */
 .disc {
   background: var(--gold-dim); border: 1px solid rgba(232,200,109,0.15);
@@ -970,7 +990,7 @@ footer {
       <div class="logo-mark"></div>
       <div>
         <div class="logo-name">VERITAS</div>
-        <div class="logo-edition">ROADJUDGE v5.1 — PUBLIC</div>
+        <div class="logo-edition">ROADJUDGE v7 — PUBLIC</div>
       </div>
     </a>
 
@@ -1087,13 +1107,15 @@ footer {
       <div style="display:flex;gap:12px;">
         <div class="scan-input-wrap">
           <div class="file-drop" id="fileDrop" ondragover="onDO(event)" ondragleave="onDL()" ondrop="onDD(event)">
-            <input type="file" id="fileInp" accept="video/mp4,video/webm,video/quicktime,image/*" onchange="onFS(event)">
+            <input type="file" id="fileInp" accept="image/*" multiple onchange="onFS(event)">
             <div class="file-drop-ico">📷</div>
             <div class="file-drop-txt" data-i18n="drop_txt">블랙박스 캡처 이미지를 드래그하거나 클릭</div>
-            <div class="file-drop-sub">JPG · PNG · 사고 순간 프레임 캡처 권장 · 최대 200MB</div>
+            <div class="file-drop-sub">JPG · PNG · 최대 5장 동시 업로드 · 사고 전후 프레임 권장</div>
           </div>
+          <!-- 다중 이미지 미리보기 -->
+          <div id="multiThumbRow" style="display:none;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
           <div class="file-tag" id="fileTag">
-            <span style="font-size:16px">🎬</span>
+            <span style="font-size:16px">📷</span>
             <span class="file-tag-name" id="ftName"></span>
             <span class="file-tag-size" id="ftSize"></span>
             <button class="file-rm" onclick="rmFile()">×</button>
@@ -1101,7 +1123,7 @@ footer {
           <div class="thumb-row" id="thumbRow">
             <canvas class="thumb-canvas" id="thumbCanvas"></canvas>
             <div class="thumb-info">
-              <strong data-i18n="thumb_label">영상 프리뷰</strong>
+              <strong data-i18n="thumb_label">이미지 프리뷰</strong>
               <span id="thumbDesc"></span>
             </div>
           </div>
@@ -1134,7 +1156,7 @@ footer {
     <div class="card-bottom">
       <button class="btn-sample" onclick="fillSample()" data-i18n="btn_sample">샘플 살펴보기</button>
       <div class="card-selects">
-        <select class="mini-select" id="accType">
+        <select class="mini-select" id="accType" onchange="showFaultGuide(this.value)">
           <option value="" data-i18n="sel_default">사고 유형 선택</option>
           <option value="후방추돌">후방추돌</option>
           <option value="차선변경충돌">차선변경충돌</option>
@@ -1145,6 +1167,9 @@ footer {
           <option value="기타">기타</option>
         </select>
         <input type="text" class="mini-input" id="extra" placeholder="날씨, 속도, 신호 정보..." style="width:175px">
+      </div>
+      <!-- 과실기준 안내 배너 -->
+      <div id="faultGuide" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.25);border-radius:8px;font-size:12px;color:var(--text2);line-height:1.7;font-family:'Noto Sans KR',sans-serif;"></div>
       </div>
     </div>
   </div>
@@ -1241,6 +1266,10 @@ footer {
       <button class="btn-export" id="exportBtn" onclick="exportPDF()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="18"/><line x1="15" y1="15" x2="12" y2="18"/></svg>
         <span data-i18n="btn_export">리포트 저장</span>
+      </button>
+      <button class="btn-export" id="shareBtn" onclick="shareResult()" style="background:rgba(255,230,0,0.1);border-color:rgba(255,230,0,0.4);color:#FFE600;display:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        결과 공유
       </button>
     </div>
 
@@ -1373,6 +1402,24 @@ footer {
         </div>
       </div>
     </div>
+
+    <!-- AI 추가 질문 대화 -->
+    <div class="rc" id="chatSection" style="margin-top:8px;display:none;">
+      <div class="rc-hd" onclick="toggleRc(this.parentElement)">
+        <div class="rc-ico">💬</div>
+        <div class="rc-title">AI에게 추가 질문</div>
+        <span class="rc-label">FOLLOW-UP</span>
+        <span class="rc-arrow">▾</span>
+      </div>
+      <div class="rc-bd">
+        <div id="chatHistory" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;max-height:320px;overflow-y:auto;"></div>
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+          <textarea id="chatInput" rows="2" placeholder="예) 만약 상대방이 신호위반이었다면 과실비율이 어떻게 바뀌나요?" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;font-family:'Noto Sans KR',sans-serif;resize:none;line-height:1.5;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+          <button onclick="sendChat()" id="chatSendBtn" style="background:var(--gold);color:#0a0c10;border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;height:42px;">전송</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px;">Shift+Enter로 줄바꿈 · Enter로 전송</div>
+      </div>
+    </div>
   </div>
 
 </main>
@@ -1383,15 +1430,15 @@ footer {
       <div style="width:26px;height:26px;border:1.5px solid var(--gold);border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:13px;color:var(--gold);transform:rotate(10deg);">V</div>
       <span class="ft-name">VERITAS</span>
     </div>
-    <span class="ft-txt" data-i18n="footer_txt">ROADJUDGE v5.1 · 교통사고 AI 포렌식 분석 · 법률 판정 불포함 · 무료 공개</span>
-    <a href="mailto:overjump040@gmail.com" style="color:var(--text3);font-size:11px;text-decoration:none;margin-top:6px;display:block;letter-spacing:0.05em;">제휴·광고 문의 · overjump040@gmail.com</a>
+    <span class="ft-txt" data-i18n="footer_txt">ROADJUDGE v7 · 도로교통법 조문 근거 명시 · AI 포렌식 분석 · 무료 공개</span>
+    <a href="/cdn-cgi/l/email-protection#721d04170018071f0242464232151f131b1e5c111d1f" style="color:var(--text3);font-size:11px;text-decoration:none;margin-top:6px;display:block;letter-spacing:0.05em;">제휴·광고 문의 · <span class="__cf_email__" data-cfemail="dcb3aab9aeb6a9b1acece8ec9cbbb1bdb5b0f2bfb3b1">[email&#160;protected]</span></a>
   </div>
 </footer>
 
 <button class="fab" id="fab" onclick="goTop()" title="새 분석">＋</button>
 <video id="hv" style="display:none" muted playsinline></video>
 
-<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
@@ -1408,7 +1455,7 @@ const I18N = {
     hero_sub:'블랙박스 영상, 사고 상황, 문서를 입력하면<br>VERITAS 엔진이 포렌식 수준의 분석을 제공합니다.',
     tab_text:'텍스트', tab_file:'파일', tab_url:'URL',
     api_save:'저장',
-    txt_ph:'사고 상황을 상세히 입력하세요.\n예) 왕복 4차선 도로에서 2차선으로 직진 중이었는데, 3차선에서 진행하던 상대 차량이 방향지시등 없이 갑자기 차선을 변경하여 제 차량 측면을 충돌했습니다...',
+    txt_ph:'아래 항목을 참고하여 상세히 입력할수록 분석 정확도가 높아집니다.\n\n📅 언제: 날짜, 시간, 날씨\n📍 어디서: 도로 종류, 교차로/직선, 신호 유무\n🚗 어떻게: 내 차와 상대 차의 행동을 각각 설명\n⚠️ 원인: 신호위반/과속/부주의 등 추정 원인\n📋 현재상황: 부상 여부, 보험 접수 여부, 상대방 주장\n\n예) 2026년 3월 8일 오후 2시, 맑음. 왕복 4차선 신호 교차로에서 녹색 신호에 직진 중이었습니다. 상대 차량이 반대편에서 적색 신호임에도 좌회전하여 제 차 앞범퍼를 충격했습니다. 상대방은 황색신호였다고 주장 중이며 부상 없고 보험 접수 완료했습니다.',
     url_ph:'분석할 영상 URL을 입력하세요.',
     drop_txt:'영상 또는 이미지를 드래그하거나 클릭',
     thumb_label:'영상 프리뷰',
@@ -1427,7 +1474,7 @@ const I18N = {
     disc_txt:'본 분석 결과는 사용자가 제공한 정보와 AI 추론에 기반한 <strong>참고용 구조화 자료</strong>입니다. 과실 비율, 법적 책임 판정, 형사/민사 결론을 포함하지 않으며 포함해서도 안 됩니다.',
     hist_title:'분석 히스토리', hist_clear:'전체 삭제', hist_empty:'히스토리가 없습니다.',
     cnt_total:'총 분석 건수', cnt_today:'오늘 분석', cnt_live:'실시간 운영 중',
-    footer_txt:'ROADJUDGE v5.1 · 교통사고 AI 포렌식 분석 · 법률 판정 불포함 · 무료 공개',
+    footer_txt:'ROADJUDGE v7 · 도로교통법 조문 근거 명시 · AI 포렌식 분석 · 무료 공개',
     conf_hi:'신뢰도 높음', conf_md:'신뢰도 보통', conf_lo:'신뢰도 낮음',
     toast_sample:'샘플 데이터가 입력되었습니다.', toast_done:'분석이 완료되었습니다.',
     toast_err:'오류가 발생했습니다.', toast_api_err:'Worker URL을 먼저 설정해 주세요.',
@@ -1468,7 +1515,7 @@ const I18N = {
     disc_txt:'This analysis is a structured reference based on user input and AI inference. It does not constitute fault ratios, legal liability, or criminal/civil conclusions.',
     hist_title:'Analysis History', hist_clear:'Clear All', hist_empty:'No history yet.',
     cnt_total:'Total Analyses', cnt_today:"Today's Analyses", cnt_live:'Live & Running',
-    footer_txt:'ROADJUDGE v5.1 · AI Traffic Accident Forensics · No Legal Conclusions · Free Public Access',
+    footer_txt:'ROADJUDGE v7 · Road Traffic Act References · AI Forensic Analysis · Free',
     conf_hi:'High Confidence', conf_md:'Medium Confidence', conf_lo:'Low Confidence',
     toast_sample:'Sample data loaded.', toast_done:'Analysis complete.',
     toast_err:'An error occurred.', toast_api_err:'Please set your Worker URL first.',
@@ -1697,21 +1744,45 @@ function setBanner(state) {
    FILE + THUMBNAIL
 ══════════════════════════════════════ */
 let sf = null;
+let sfMulti = []; // 다중 이미지 배열
 function onDO(e) { e.preventDefault(); document.getElementById('fileDrop').classList.add('over'); }
 function onDL()  { document.getElementById('fileDrop').classList.remove('over'); }
-function onDD(e) { e.preventDefault(); onDL(); const f = e.dataTransfer.files[0]; if(f) procF(f); }
-function onFS(e) { const f = e.target.files[0]; if(f) procF(f); }
+function onDD(e) { e.preventDefault(); onDL(); const files = Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/')); if(files.length) procFMulti(files); }
+function onFS(e) { const files = Array.from(e.target.files).filter(f=>f.type.startsWith('image/')); if(files.length) procFMulti(files); }
 
-function procF(f) {
-  if (f.size > 200*1024*1024) { toast(t('toast_file_big'), 'error'); return; }
-  sf = f;
-  document.getElementById('ftName').textContent = f.name;
-  document.getElementById('ftSize').textContent = fmtB(f.size);
+function procFMulti(files) {
+  if (files.length > 5) { toast('이미지는 최대 5장까지 업로드 가능합니다.', 'error'); files = files.slice(0,5); }
+  sfMulti = files;
+  sf = files[0]; // 하위 호환
+  // 파일 태그 표시
+  document.getElementById('ftName').textContent = files.length > 1 ? `${files[0].name} 외 ${files.length-1}장` : files[0].name;
+  document.getElementById('ftSize').textContent = fmtB(files.reduce((a,f)=>a+f.size,0));
   const ft = document.getElementById('fileTag');
   ft.style.display = 'flex'; ft.classList.add('show');
   simProg();
-  if (f.type.startsWith('video/')) extractThumbVideo(f);
-  else if (f.type.startsWith('image/')) extractThumbImage(f);
+  // 다중 썸네일 표시
+  showMultiThumbs(files);
+}
+
+function showMultiThumbs(files) {
+  const row = document.getElementById('multiThumbRow');
+  row.innerHTML = '';
+  row.style.display = 'flex';
+  files.forEach((f, i) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const div = document.createElement('div');
+      div.style.cssText = 'position:relative;width:80px;height:60px;border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,0.15);';
+      div.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">
+        <div style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;">${i+1}</div>`;
+      row.appendChild(div);
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+function procF(f) {
+  procFMulti([f]);
 }
 
 function extractThumbVideo(file) {
@@ -1751,10 +1822,13 @@ function extractThumbImage(file) {
 
 function rmFile() {
   sf = null;
+  sfMulti = [];
   document.getElementById('fileInp').value = '';
   const ft = document.getElementById('fileTag');
   ft.style.display = 'none'; ft.classList.remove('show');
   document.getElementById('thumbRow').style.display = 'none';
+  document.getElementById('multiThumbRow').style.display = 'none';
+  document.getElementById('multiThumbRow').innerHTML = '';
   document.getElementById('progTrack').style.display = 'none';
   document.getElementById('thumbCanvas').getContext('2d').clearRect(0,0,9999,9999);
 }
@@ -1784,11 +1858,112 @@ function fillSample() {
 /* ══════════════════════════════════════
    SYSTEM PROMPT
 ══════════════════════════════════════ */
-const SYS = `당신은 VERITAS 교통사고 포렌식 AI입니다.
-[절대 금지] 과실비율 확정, 법률결론 단정, 법률자문, 형사/민사 판단
+const SYS = `당신은 VERITAS 교통사고 포렌식 AI입니다. 한국 도로교통법, 민법, 보험개발원 과실비율 인정기준, 대법원 판례 패턴을 기반으로 분석합니다.
+
+[절대 금지] 과실비율 확정, 법률결론 단정, 법률자문, 형사/민사 판단, 존재하지 않는 판례번호 생성
 [필수 표현] "~가능성이 있습니다", "~검토가 필요합니다", "추가 자료 확인 필요"
-[기준] 한국 도로교통법, 판례 기반 시나리오 비교 방식
 [AI 역할] 분석 보조관 - 사람이 최종 판단해야 함
+
+=== 근거 법령 체계 (법률 참조 시 반드시 해당 조문 명시) ===
+
+【도로교통법 주요 조문】
+제5조(신호 또는 지시에 따를 의무) - 신호위반 사고의 기본 근거
+제13조(차마의 통행) - 차선 위반, 중앙선 침범
+제13조의2(자전거 등의 통행방법) - 자전거 관련 사고
+제14조(차로의 설치 등) - 차선변경, 차로 준수
+제18조(횡단 등의 금지) - 무단횡단
+제19조(안전거리 확보 등) - 추돌사고, 안전거리 미확보
+제20조(앞지르기 방법 등) - 추월 사고
+제21조(앞지르기 금지의 시기 및 장소) - 추월 금지 구간 사고
+제22조(긴급자동차의 우선 통행) - 긴급차량 관련
+제24조(철길 건널목의 통과) - 철길 건널목 사고
+제25조(교차로 통행방법) - 교차로 사고 핵심 조문
+제26조(교통정리가 없는 교차로에서의 양보운전) - 무신호교차로
+제27조(보행자의 보호) - 횡단보도 보행자 보호 핵심 조문
+제29조(긴급자동차의 우선 통행)
+제31조(특별한 금지 행위) - 급제동 금지
+제32조(정차 및 주차의 금지) - 불법주정차
+제38조(차의 신호) - 방향지시등 의무
+제43조(무면허운전 등의 금지) - 무면허 사고 가산
+제44조(술에 취한 상태에서의 운전 금지) - 음주운전 가산
+제48조(안전운전 및 친환경 경제운전의 의무) - 일반 안전운전 의무
+제49조(모든 운전자의 준수사항 등) - 휴대폰 사용, 전방주시
+제51조(어린이통학버스의 특별보호) - 스쿨버스 관련
+제53조(어린이통학버스 운전자 및 운영자 등의 의무)
+제56조(노인 및 어린이 보호구역 지정) - 스쿨존 사고 근거
+
+【민법】
+제750조(불법행위의 내용) - 손해배상 청구 근거
+제751조(재산 이외의 손해의 배상) - 위자료
+제763조(준용규정) - 과실상계 근거
+
+【자동차손해배상보장법】
+제3조(자동차손해배상책임) - 운행자 책임
+제5조(의무보험의 가입의무) - 의무보험
+제10조(보험금 등의 청구)
+
+【특정범죄 가중처벌 등에 관한 법률】
+제5조의3(도주차량 운전자의 가중처벌) - 뺑소니 가중
+제5조의11(어린이 보호구역에서의 치사상의 가중처벌) - 민식이법
+
+=== 한국 실제 과실비율 기준표 (보험개발원 과실비율 인정기준 제4판 기준) ===
+
+【후방추돌】근거: 도로교통법 제19조(안전거리 확보)
+기본: 피추돌(A) 0~10% / 추돌(B) 90~100%
+A 급제동 시: A 20~30% / B 70~80% ※도로교통법 제31조
+A 차선변경 직후 추돌: A 30~40% / B 60~70% ※도로교통법 제14조
+고속도로 정체 구간 추돌: B 100% ※도로교통법 제19조
+
+【신호교차로】근거: 도로교통법 제5조, 제25조
+직진 vs 직진(신호위반): 신호위반 차량 90~100% ※도로교통법 제5조
+직진(녹색) vs 좌회전(적색): 좌회전 차량 90~100% ※도로교통법 제25조 제1항
+황색신호 진입 vs 적색신호 진입: 황색 20~30% / 적색 70~80%
+동시 황색신호 진입: 각 50%
+
+【무신호교차로】근거: 도로교통법 제26조(양보운전)
+동일 폭 도로: 각 50% ※도로교통법 제26조 제3항
+넓은 도로 직진 vs 좁은 도로 진입: 좁은도로 70~80% ※도로교통법 제26조 제1항
+우선도로 직진 vs 비우선도로: 비우선 80~90% ※도로교통법 제26조 제2항
+직진 vs 우회전: 우회전 차량 60~70% ※도로교통법 제25조 제3항
+직진 vs 좌회전: 좌회전 차량 70~80% ※도로교통법 제25조 제1항
+
+【차선변경/끼어들기】근거: 도로교통법 제14조, 제38조
+기본 차선변경 중 충돌: 변경차량 70~80% ※도로교통법 제14조 제3항
+급차선변경(방향지시등 미점등): 변경차량 90% ※도로교통법 제38조 제1항
+고속도로 합류 시: 합류차량 60~70% ※도로교통법 제14조
+
+【중앙선 침범】근거: 도로교통법 제13조 제3항
+중앙선 침범 직접충돌: 침범차량 100% ※도로교통법 제13조 제3항
+커브길 중앙선 침범: 침범차량 90~100%
+부득이한 사유(빙판 등): 침범차량 70~80%
+
+【주정차 관련】근거: 도로교통법 제32조, 제33조
+불법 주정차 차량 추돌: 주정차 20~30% / 추돌 70~80% ※도로교통법 제32조
+야간 무등화 주차 추돌: 주차 40~50% / 추돌 50~60%
+
+【보행자 사고】근거: 도로교통법 제27조(보행자 보호)
+횡단보도(녹색신호) 보행자: 차량 100% ※도로교통법 제27조 제1항
+횡단보도(적색신호) 보행자: 차량 60~70% / 보행자 30~40%
+무단횡단(야간): 차량 30~50% / 보행자 50~70% ※민법 제763조(과실상계)
+어린이보호구역: 차량 90~100% ※특가법 제5조의11(민식이법)
+
+【가산 요소】
+빗길/눈길 과속: +10~20% ※도로교통법 제17조(속도 제한)
+음주운전: +20~30% ※도로교통법 제44조
+신호위반: +20~30% ※도로교통법 제5조
+안전거리 미확보: 후행차량 +10~20% ※도로교통법 제19조
+휴대폰 사용 중 사고: +10~20% ※도로교통법 제49조 제1항 제10호
+무면허: +20~30% ※도로교통법 제43조
+
+=== 대법원 판례 유형 패턴 (참고용 — 번호 임의 생성 금지) ===
+판례 참조 시 반드시 "~판례 패턴에 의하면" 형식으로 표현하고, 구체적 판례번호는 절대 임의 생성하지 말 것.
+- 후방추돌 안전거리 미확보: 대법원 "추돌사고에서 후행차량은 안전거리 확보 의무" 판례 패턴
+- 차선변경 사고: 대법원 "차선변경 차량이 주된 과실" 판례 패턴  
+- 횡단보도 보행자: 대법원 "횡단보도 내 보행자 보호의무 절대적" 판례 패턴
+- 신호위반 교차로: 대법원 "신호위반 차량의 중대 과실 인정" 판례 패턴
+- 음주운전: 대법원 "음주운전 중 사고 시 가중 과실 인정" 판례 패턴
+
+위 기준표와 법령을 참고하여 사고 유형을 분류하고, law_refs 필드에 반드시 관련 조문(예: "도로교통법 제27조 제1항")을 3개 이상 명시하세요.
 
 반드시 아래 JSON만 응답하세요 (마크다운 없이):
 {
@@ -1856,7 +2031,7 @@ async function startAnalysis() {
     document.getElementById('proxyUrl').focus();
     return;
   }
-  if (!sit && !url2 && !sf) { toast(t('toast_input_err'), 'error'); return; }
+  if (!sit && !url2 && !sfMulti.length) { toast(t('toast_input_err'), 'error'); return; }
 
   setLoad(true); hideErr();
   document.getElementById('results').style.display = 'none';
@@ -1864,18 +2039,22 @@ async function startAnalysis() {
 
   const parts = [];
   if (url2)  parts.push(`영상 URL: ${url2}`);
-  if (sf)    parts.push(`파일명: ${sf.name} (${fmtB(sf.size)})`);
+  if (sfMulti.length) parts.push(`블랙박스 이미지 ${sfMulti.length}장 첨부됨`);
   if (type)  parts.push(`사고 유형: ${type}`);
   if (sit)   parts.push(`사고 상황:\n${sit}`);
   if (extra) parts.push(`추가 정보: ${extra}`);
 
-  // Build messages - if image file, include as vision
+  // 다중 이미지 포함 메시지 구성
   let userContent;
-  if (sf && sf.type.startsWith('image/')) {
-    const b64 = await fileToB64(sf);
+  if (sfMulti.length > 0) {
+    const imgContents = await Promise.all(sfMulti.map(async (f) => {
+      const b64 = await fileToB64(f);
+      return { type: 'image', source: { type: 'base64', media_type: f.type, data: b64 } };
+    }));
+    const textPart = parts.filter(p => !p.includes('이미지')).join('\n\n') || '위 블랙박스 이미지들의 사고 상황을 순서대로 분석해주세요.';
     userContent = [
-      { type: 'image', source: { type: 'base64', media_type: sf.type, data: b64 } },
-      { type: 'text', text: parts.filter(p => !p.startsWith('파일명')).join('\n\n') || '위 이미지의 사고 상황을 분석해주세요.' }
+      ...imgContents,
+      { type: 'text', text: `[블랙박스 이미지 ${sfMulti.length}장 분석 요청]\n${textPart}\n\n이미지들을 시간 순서대로 분석하여 사고 경위를 파악해주세요.` }
     ];
   } else {
     userContent = parts.join('\n\n');
@@ -1920,6 +2099,15 @@ async function startAnalysis() {
     renderAll(result, type);
     toast(t('toast_done'), 'success');
     setTimeout(fetchCounter, 1000); // 분석 완료 후 카운터 갱신
+
+    // AI 추가 질문 대화 초기화
+    const userInputSummary = [
+      url2 ? `영상URL: ${url2}` : '',
+      type ? `사고유형: ${type}` : '',
+      sit ? `사고상황: ${sit}` : '',
+      extra ? `추가정보: ${extra}` : ''
+    ].filter(Boolean).join('\n');
+    initChat(result, userInputSummary);
 
   } catch(e) {
     if (e.name === 'AbortError') { setLoad(false); return; }
@@ -1981,6 +2169,10 @@ function renderAll(r, accType) {
     document.getElementById('faultBPct').textContent = bMin === bMax ? bMin + '%' : bMin + '~' + bMax + '%';
     if (fe.note) document.getElementById('faultNote').textContent = '※ ' + fe.note + ' · AI 참고용 추정 범위';
     fm.style.display = 'block';
+    // PDF용 hidden data
+    fm.dataset.aMin = aMin; fm.dataset.aMax = aMax;
+    fm.dataset.bMin = bMin; fm.dataset.bMax = bMax;
+    fm.dataset.note = fe.note || '';
   } else { fm.style.display = 'none'; }
 
   renderDiagram(r.diagram, accType);
@@ -1990,7 +2182,8 @@ function renderAll(r, accType) {
   if (!r.timeline?.length) tl.innerHTML = `<div style="color:var(--text3);font-family:'DM Mono',monospace;font-size:12px">${t('empty_tl')}</div>`;
   else tl.innerHTML = r.timeline.map(item => {
     const dc = item.level==='danger'?'tl-d':item.level==='warn'?'tl-w':'tl-n';
-    return `<div class="tl-row"><div class="tl-t">${esc(item.time||'')}</div><div class="tl-dot ${dc}"></div><div class="tl-txt">${esc(item.event||'')}</div></div>`;
+    const cls = item.level==='danger'?' danger':item.level==='warn'?' warn':'';
+    return `<div class="tl-row tl-item${cls}"><div class="tl-t tl-time">${esc(item.time||'')}</div><div class="tl-dot ${dc}"></div><div class="tl-txt tl-ev">${esc(item.event||'')}</div></div>`;
   }).join('');
 
   // Behavior
@@ -2000,8 +2193,9 @@ function renderAll(r, accType) {
     const sides = [r.behavior.ego, r.behavior.other].filter(Boolean);
     bg.innerHTML = sides.map((s,i) => {
       const dc = i===0?'bd-a':'bd-b';
-      const items = (s.items||[]).map(it => `<div class="beh-it bi-${it.color||'gray'}">${esc(it.text||'')}</div>`).join('');
-      return `<div class="beh-c"><div class="beh-ac"><span class="beh-dot ${dc}"></span>${esc(s.actor||'')}</div>${items}</div>`;
+      const side = i===0?'ego':'other';
+      const items = (s.items||[]).map(it => `<div class="beh-it beh-item bi-${it.color||'gray'}" data-side="${side}">${esc(it.text||'')}</div>`).join('');
+      return `<div class="beh-c"><div class="beh-ac beh-actor" data-side="${side}"><span class="beh-dot ${dc}"></span>${esc(s.actor||'')}</div>${items}</div>`;
     }).join('');
   }
 
@@ -2018,18 +2212,26 @@ function renderAll(r, accType) {
   if (!r.scenarios?.length) sl2.innerHTML = `<div style="color:var(--text3);font-family:'DM Mono',monospace;font-size:12px">${t('empty_sc')}</div>`;
   else sl2.innerHTML = r.scenarios.map(s => {
     const evs = (s.evidence||[]).map(e => `<span class="sc-ev">${esc(e)}</span>`).join('');
-    return `<div class="sc-c"><div class="sc-hd"><div class="sc-id">${esc(s.id||'')}</div><div class="sc-ttl">${esc(s.title||'')}</div></div><div class="sc-desc">${esc(s.desc||'')}</div>${evs?`<div class="sc-evs">${evs}</div>`:''}${s.uncertainty?`<div class="sc-unc">${lang==='ko'?'불확실 요소':'Uncertainty'}: ${esc(s.uncertainty)}</div>`:''}</div>`;
+    return `<div class="sc-c sc-card"><div class="sc-hd"><div class="sc-id">${esc(s.id||'')}</div><div class="sc-ttl sc-title">${esc(s.title||'')}</div></div><div class="sc-desc">${esc(s.desc||'')}</div>${evs?`<div class="sc-evs">${evs}</div>`:''}${s.uncertainty?`<div class="sc-unc">${lang==='ko'?'불확실 요소':'Uncertainty'}: ${esc(s.uncertainty)}</div>`:''}</div>`;
   }).join('');
 
   // Legal
   const lg = document.getElementById('lgGrid');
   if (!r.legal) lg.innerHTML = '';
   else {
-    const blkDefs = lang==='ko'
-      ? [{t:'검토 필요 사항',items:r.legal.issues||[]},{t:'관련 법규 참고',items:r.legal.law_refs||[]},{t:'추가 필요 자료',items:r.legal.additional_needed||[]}]
-      : [{t:'Issues',items:r.legal.issues||[]},{t:'Relevant Laws',items:r.legal.law_refs||[]},{t:'Additional Evidence',items:r.legal.additional_needed||[]}];
-    const blks = blkDefs.filter(b => b.items.length);
-    lg.innerHTML = `<div class="lg-g">${blks.map(b=>`<div class="lg-b"><div class="lg-bttl">${esc(b.t)}</div><ul class="lg-list">${b.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`).join('')}</div>`;
+    const lawBadges = (r.legal.law_refs||[]).map(i => {
+      const isKorLaw = i.includes('법') || i.includes('조') || i.includes('항');
+      return `<span class="law-badge ${isKorLaw?'law-badge-act':'law-badge-case'}">${esc(i)}</span>`;
+    }).join('');
+    const issueItems = (r.legal.issues||[]).map(i=>`<li class="lg-item">⚠ ${esc(i)}</li>`).join('');
+    const addItems = (r.legal.additional_needed||[]).map(i=>`<li class="lg-item">📎 ${esc(i)}</li>`).join('');
+    const ko = lang==='ko';
+    lg.innerHTML = `
+      ${lawBadges ? `<div class="lg-b lg-b-law"><div class="lg-bttl">⚖️ ${ko?'적용 법령 및 조문':'Applicable Laws & Articles'}</div><div class="law-badge-wrap">${lawBadges}</div></div>` : ''}
+      <div class="lg-g">
+        ${issueItems ? `<div class="lg-b"><div class="lg-bttl">${ko?'검토 필요 사항':'Issues to Review'}</div><ul class="lg-list">${issueItems}</ul></div>` : ''}
+        ${addItems ? `<div class="lg-b"><div class="lg-bttl">${ko?'추가 필요 자료':'Additional Evidence'}</div><ul class="lg-list">${addItems}</ul></div>` : ''}
+      </div>`;
   }
 
   document.getElementById('results').style.display = 'block';
@@ -2181,33 +2383,341 @@ function svgLeg(dark) {
 /* ══════════════════════════════════════
    PDF EXPORT
 ══════════════════════════════════════ */
+/* ══════════════════════════════════════
+   FAULT GUIDE — 사고유형별 과실기준 안내
+══════════════════════════════════════ */
+const FAULT_GUIDE = {
+  '후방추돌': '📊 보험개발원 기준\n• 기본: 피추돌(내 차) 0~10% / 추돌(상대) 90~100%\n• 내 차 급제동 시: 내 차 20~30% / 상대 70~80%\n• 내 차 차선변경 직후 추돌: 내 차 30~40% / 상대 60~70%\n• 고속도로 정체 구간: 상대 100%',
+  '차선변경충돌': '📊 보험개발원 기준\n• 기본 차선변경 중 충돌: 변경 차량 70~80%\n• 급차선변경(방향지시등 미점등): 변경 차량 90%\n• 고속도로 합류 시: 합류 차량 60~70%',
+  '끼어들기충돌': '📊 보험개발원 기준\n• 급끼어들기(방향지시등 미점등): 끼어든 차량 80~90%\n• 일반 끼어들기: 끼어든 차량 70~80%\n• 안전거리 미확보 후행 차량: +10~20% 가산',
+  '교차로충돌': '📊 보험개발원 기준\n• 신호교차로 신호위반: 위반 차량 90~100%\n• 직진(녹색) vs 좌회전(적색): 좌회전 차량 90~100%\n• 동시 황색 진입: 각 50%\n• 무신호 동일폭 도로: 각 50% / 우선도로 우선',
+  '횡단보도사고': '📊 보험개발원 기준\n• 횡단보도 녹색신호 보행자: 차량 100%\n• 횡단보도 적색신호 보행자: 차량 60~70% / 보행자 30~40%\n• 무단횡단(야간): 차량 30~50% / 보행자 50~70%\n• 어린이보호구역: 차량 90~100%',
+  '주차장사고': '📊 보험개발원 기준\n• 불법 주정차 차량 추돌: 주정차 20~30% / 추돌 70~80%\n• 야간 무등화 주차 추돌: 주차 40~50% / 추돌 50~60%\n• 이중주차 차량 충돌: 이중주차 차량 60~70%',
+};
+
+function showFaultGuide(type) {
+  const el = document.getElementById('faultGuide');
+  if (!type || !FAULT_GUIDE[type]) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = '<span style="color:var(--gold);font-weight:700;font-size:11px;letter-spacing:0.05em;">⚖️ ' + type + ' 참고 과실기준</span><pre style="margin:6px 0 0;white-space:pre-wrap;font-family:inherit;font-size:12px;">' + FAULT_GUIDE[type] + '</pre>';
+}
+
+/* ══════════════════════════════════════
+   AI CHAT — 분석 후 추가 질문
+══════════════════════════════════════ */
+let chatContext = null; // 분석 결과 컨텍스트
+let chatMessages = []; // 대화 히스토리
+
+function initChat(analysisResult, userInput) {
+  chatContext = { analysisResult, userInput };
+  chatMessages = [];
+  document.getElementById('chatHistory').innerHTML = '';
+  document.getElementById('chatSection').style.display = 'block';
+    document.getElementById('shareBtn').style.display = 'inline-flex';
+}
+
+function appendChatBubble(role, text) {
+  const el = document.getElementById('chatHistory');
+  const isUser = role === 'user';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;justify-content:${isUser?'flex-end':'flex-start'};`;
+  div.innerHTML = `<div style="max-width:80%;padding:10px 14px;border-radius:${isUser?'14px 14px 4px 14px':'14px 14px 14px 4px'};background:${isUser?'rgba(212,175,55,0.2)':'rgba(255,255,255,0.06)'};border:1px solid ${isUser?'rgba(212,175,55,0.3)':'rgba(255,255,255,0.1)'};font-size:13px;color:var(--text);line-height:1.6;font-family:'Noto Sans KR',sans-serif;white-space:pre-wrap;">${text}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendChat() {
+  const inp = document.getElementById('chatInput');
+  const q = inp.value.trim();
+  if (!q) return;
+  if (!chatContext) { toast('먼저 사고 분석을 실행해주세요.', 'error'); return; }
+
+  inp.value = '';
+  appendChatBubble('user', q);
+  chatMessages.push({ role: 'user', content: q });
+
+  const btn = document.getElementById('chatSendBtn');
+  btn.disabled = true; btn.textContent = '...';
+
+  try {
+    const systemMsg = `당신은 VERITAS 교통사고 포렌식 AI입니다. 이미 아래 사고에 대한 분석이 완료된 상태입니다.
+
+[원본 사고 정보]
+${chatContext.userInput}
+
+[기존 분석 결과 요약]
+${JSON.stringify(chatContext.analysisResult, null, 2)}
+
+사용자의 추가 질문에 한국어로 친절하고 명확하게 답변하세요. 법률 확정 판단은 하지 말고 참고용으로 설명하세요.`;
+
+    const messages = [
+      ...chatMessages.slice(0, -1).map(m => ({ role: m.role, content: m.content })),
+      { role: 'user', content: q }
+    ];
+
+    const proxyUrl = getProxy();
+    const res = await fetch(proxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 800,
+        system: systemMsg,
+        messages
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || '응답을 받지 못했습니다.';
+    chatMessages.push({ role: 'assistant', content: reply });
+    appendChatBubble('assistant', reply);
+  } catch(e) {
+    appendChatBubble('assistant', '오류가 발생했습니다. 다시 시도해주세요.');
+  } finally {
+    btn.disabled = false; btn.textContent = '전송';
+  }
+}
+
+
+/* ══════════════════════════════════════
+   SHARE
+══════════════════════════════════════ */
+function shareResult() {
+  const summary = document.getElementById('sTxt')?.textContent || '';
+  const confTag = document.getElementById('confTag')?.textContent || '';
+  const aMin = document.getElementById('faultAmin')?.textContent || '';
+  const aMax = document.getElementById('faultAmax')?.textContent || '';
+  const bMin = document.getElementById('faultBmin')?.textContent || '';
+  const bMax = document.getElementById('faultBmax')?.textContent || '';
+
+  const text = `🚗 VERITAS 교통사고 AI 분석 결과
+
+📋 요약: ${summary}
+
+⚖️ 과실비율 추정
+• 자차: ${aMin}~${aMax}%
+• 상대차: ${bMin}~${bMax}%
+
+🔍 신뢰도: ${confTag}
+
+⚠️ AI 참고용이며 법적 효력 없음
+🔗 ${window.location.href}`;
+
+  // 카카오톡 공유 시도
+  if (navigator.share) {
+    navigator.share({
+      title: 'VERITAS 교통사고 분석 결과',
+      text: text,
+      url: window.location.href
+    }).catch(()=> fallbackShare(text));
+  } else {
+    fallbackShare(text);
+  }
+}
+
+function fallbackShare(text) {
+  // 클립보드 복사
+  navigator.clipboard.writeText(text).then(() => {
+    toast('분석 결과가 클립보드에 복사됐습니다! 카카오톡·문자에 붙여넣기하세요.', 'success');
+  }).catch(() => {
+    // 구형 브라우저 폴백
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('분석 결과가 복사됐습니다! 카카오톡에 붙여넣기하세요.', 'success');
+  });
+}
+
 async function exportPDF() {
   const btn = document.getElementById('exportBtn');
-  btn.disabled = true; toast(t('toast_pdf'), 'info');
+  btn.disabled = true; toast('보험사 제출용 리포트 생성 중...', 'info');
   try {
-    const el = document.getElementById('results');
-    const canvas = await html2canvas(el, {
-      scale: 1.5,
-      backgroundColor: theme==='dark' ? '#0a0c10' : '#f0f2f7',
-      logging: false, useCORS: true
-    });
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-    const W=210, m=12, uw=W-m*2;
-    const imgH = (canvas.height/canvas.width)*uw;
-    let remaining=imgH, srcY=0;
-    while (remaining > 0) {
-      const ph=Math.min(remaining,277-m*2), sh=(ph/imgH)*canvas.height;
-      const pc=document.createElement('canvas'); pc.width=canvas.width; pc.height=sh;
-      pc.getContext('2d').drawImage(canvas,0,srcY,canvas.width,sh,0,0,canvas.width,sh);
-      const pi=pc.toDataURL('image/jpeg',0.92);
-      if (srcY>0) pdf.addPage();
-      pdf.addImage(pi,'JPEG',m,m,uw,ph);
-      srcY+=sh; remaining-=ph;
+    const W = 210, H = 297, m = 15, cw = W - m*2;
+    let y = m;
+
+    // 폰트 설정
+    pdf.setFont('helvetica');
+
+    // ── 헤더 배경 ──
+    pdf.setFillColor(10, 12, 16);
+    pdf.rect(0, 0, W, 38, 'F');
+
+    // VERITAS 로고 텍스트
+    pdf.setFontSize(20); pdf.setTextColor(212, 175, 55);
+    pdf.setFont('helvetica','bold');
+    pdf.text('VERITAS', m, 18);
+
+    pdf.setFontSize(9); pdf.setTextColor(180, 180, 180);
+    pdf.setFont('helvetica','normal');
+    pdf.text('ROADJUDGE AI Forensic Report', m, 25);
+
+    // 날짜/리포트번호
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0,10);
+    const timeStr = now.toTimeString().slice(0,8);
+    const reportNo = 'VR-' + now.getTime().toString().slice(-8);
+    pdf.setFontSize(8); pdf.setTextColor(150, 150, 150);
+    pdf.text(`Report No: ${reportNo}`, W-m, 16, {align:'right'});
+    pdf.text(`Generated: ${dateStr} ${timeStr}`, W-m, 22, {align:'right'});
+    pdf.text('AI Reference Only · Not Legal Evidence', W-m, 28, {align:'right'});
+
+    y = 48;
+
+    // ── 면책 배너 ──
+    pdf.setFillColor(60, 20, 20);
+    pdf.rect(m, y-4, cw, 12, 'F');
+    pdf.setDrawColor(200, 80, 80);
+    pdf.rect(m, y-4, cw, 12, 'S');
+    pdf.setFontSize(8); pdf.setTextColor(240, 140, 140);
+    pdf.setFont('helvetica','bold');
+    pdf.text('⚠  본 분석은 AI 추정 참고용이며 법적 효력이 없습니다. 반드시 보험사·경찰·변호사와 상담하세요.', m+4, y+3);
+    y += 16;
+
+    // 현재 분석 결과 가져오기
+    const summary = document.getElementById('sTxt')?.textContent || '';
+    const confTag = document.getElementById('confTag')?.textContent || '';
+    const faultMeter = document.getElementById('faultMeter');
+
+    // ── 섹션: 사건 요약 ──
+    function sectionTitle(title, label) {
+      pdf.setFillColor(20, 25, 35);
+      pdf.rect(m, y, cw, 9, 'F');
+      pdf.setDrawColor(212, 175, 55); pdf.setLineWidth(0.5);
+      pdf.line(m, y+9, m+cw, y+9);
+      pdf.setFontSize(10); pdf.setTextColor(212, 175, 55); pdf.setFont('helvetica','bold');
+      pdf.text(title, m+4, y+6.5);
+      pdf.setFontSize(7); pdf.setTextColor(120,120,120); pdf.setFont('helvetica','normal');
+      pdf.text(label, m+cw-2, y+6.5, {align:'right'});
+      y += 14;
     }
-    const dateStr = new Date().toISOString().slice(0,10);
-    pdf.save(`VERITAS_Report_${dateStr}.pdf`);
-    toast(t('toast_pdf_done'), 'success');
+
+    function bodyText(text, color=[200,200,200]) {
+      pdf.setFontSize(9); pdf.setTextColor(...color); pdf.setFont('helvetica','normal');
+      const lines = pdf.splitTextToSize(text, cw-4);
+      lines.forEach(line => {
+        if (y > H-m-10) { pdf.addPage(); y = m; }
+        pdf.text(line, m+4, y);
+        y += 5.5;
+      });
+      y += 2;
+    }
+
+    function checkPage(needed=20) {
+      if (y > H-m-needed) { pdf.addPage(); y = m; }
+    }
+
+    sectionTitle('📋 사건 요약', 'SUMMARY');
+    if (summary) bodyText(summary);
+    if (confTag) {
+      pdf.setFontSize(8); pdf.setTextColor(212,175,55);
+      pdf.text(`분석 신뢰도: ${confTag}`, m+4, y); y += 8;
+    }
+
+    // ── 과실비율 ──
+    checkPage(40);
+    sectionTitle('⚖️ 과실비율 추정 (AI 참고용)', 'FAULT ESTIMATE');
+
+    const fm2 = document.getElementById('faultMeter');
+    const feA_min = parseInt(fm2?.dataset.aMin) || 0;
+    const feA_max = parseInt(fm2?.dataset.aMax) || 0;
+    const feB_min = parseInt(fm2?.dataset.bMin) || 0;
+    const feB_max = parseInt(fm2?.dataset.bMax) || 0;
+    const fNote = fm2?.dataset.note || '';
+
+    if (feA_min || feA_max) {
+      // 과실 바 배경
+      pdf.setFillColor(30,35,45); pdf.rect(m+4, y, cw-8, 12, 'F');
+      const aAvg = (feA_min+feA_max)/2;
+      const bAvg = (feB_min+feB_max)/2;
+      const barW = cw-8;
+      pdf.setFillColor(59,130,246);
+      pdf.rect(m+4, y, barW*(aAvg/100), 12, 'F');
+      pdf.setFillColor(239,68,68);
+      pdf.rect(m+4+barW*(aAvg/100), y, barW*(bAvg/100), 12, 'F');
+      pdf.setFontSize(8); pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold');
+      if (aAvg > 10) pdf.text(`자차 ${feA_min}~${feA_max}%`, m+6, y+7.5);
+      if (bAvg > 10) pdf.text(`상대 ${feB_min}~${feB_max}%`, m+4+barW*(aAvg/100)+2, y+7.5);
+      y += 17;
+      if (fNote) bodyText(`근거: ${fNote}`, [160,160,160]);
+    }
+
+    // ── 타임라인 ──
+    checkPage(30);
+    sectionTitle('⏱ 사고 타임라인', 'TIMELINE');
+    const tlItems = document.querySelectorAll('.tl-item');
+    tlItems.forEach(item => {
+      checkPage(12);
+      const time = item.querySelector('.tl-time')?.textContent || '';
+      const ev = item.querySelector('.tl-ev')?.textContent || '';
+      const isWarn = item.classList.contains('warn');
+      const isDanger = item.classList.contains('danger');
+      const color = isDanger ? [240,100,100] : isWarn ? [240,180,60] : [180,180,180];
+      pdf.setFontSize(8); pdf.setTextColor(...color);
+      pdf.text(`${time}  ${ev}`, m+4, y); y += 6;
+    });
+    y += 2;
+
+    // ── 행동 분석 ──
+    checkPage(30);
+    sectionTitle('🚗 차량 행동 분석', 'BEHAVIOR');
+    ['ego','other'].forEach(side => {
+      const actor = document.querySelector(`.beh-actor[data-side="${side}"]`)?.textContent
+                 || (side==='ego'?'자차':'상대차');
+      pdf.setFontSize(9); pdf.setTextColor(212,175,55); pdf.setFont('helvetica','bold');
+      checkPage(10);
+      pdf.text(`[ ${actor} ]`, m+4, y); y += 6;
+      const items = document.querySelectorAll(`.beh-item[data-side="${side}"]`);
+      items.forEach(item => {
+        checkPage(8);
+        pdf.setFontSize(8); pdf.setTextColor(190,190,190); pdf.setFont('helvetica','normal');
+        const lines = pdf.splitTextToSize('• ' + item.textContent, cw-10);
+        lines.forEach(l => { pdf.text(l, m+8, y); y += 5.5; });
+      });
+      y += 3;
+    });
+
+    // ── 시나리오 ──
+    checkPage(30);
+    sectionTitle('🔍 사고 시나리오 분석', 'SCENARIOS');
+    const scItems = document.querySelectorAll('.sc-card');
+    scItems.forEach(card => {
+      checkPage(25);
+      const title = card.querySelector('.sc-title')?.textContent || '';
+      const desc = card.querySelector('.sc-desc')?.textContent || '';
+      pdf.setFontSize(9); pdf.setTextColor(212,175,55); pdf.setFont('helvetica','bold');
+      pdf.text(title, m+4, y); y += 6;
+      bodyText(desc, [190,190,190]);
+      y += 2;
+    });
+
+    // ── 법률 검토 ──
+    checkPage(30);
+    sectionTitle('📚 법률 참고 사항', 'LEGAL REF');
+    const lgItems = document.querySelectorAll('.lg-item');
+    lgItems.forEach(item => {
+      checkPage(8);
+      pdf.setFontSize(8); pdf.setTextColor(180,180,200); pdf.setFont('helvetica','normal');
+      const lines = pdf.splitTextToSize('• ' + item.textContent, cw-8);
+      lines.forEach(l => { pdf.text(l, m+4, y); y += 5.5; });
+    });
+    y += 4;
+
+    // ── 푸터 ──
+    const totalPages = pdf.getNumberOfPages();
+    for (let i=1; i<=totalPages; i++) {
+      pdf.setPage(i);
+      pdf.setFillColor(10,12,16); pdf.rect(0, H-14, W, 14, 'F');
+      pdf.setFontSize(7); pdf.setTextColor(100,100,100);
+      pdf.text('VERITAS ROADJUDGE · AI 교통사고 포렌식 분석 · 법적 효력 없음 · 참고용 자료', m, H-6);
+      pdf.text(`${i} / ${totalPages}`, W-m, H-6, {align:'right'});
+    }
+
+    pdf.save(`VERITAS_리포트_${dateStr}.pdf`);
+    toast('보험사 제출용 PDF가 저장되었습니다!', 'success');
   } catch(e) { toast(t('toast_pdf_err'), 'error'); console.error(e); }
   finally { btn.disabled = false; }
 }
@@ -2292,13 +2802,4 @@ async function fetchCounter() {
 
 /* ══════════════════════════════════════
    INIT
-══════════════════════════════════════ */
-applyTheme();
-applyLang();
-loadProxy();
-renderHist();
-// 카운터: 프록시 URL 저장돼 있으면 자동 로드
-setTimeout(fetchCounter, 800);
-</script>
-</body>
-</html>
+══════════════�
